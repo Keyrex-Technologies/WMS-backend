@@ -1,6 +1,7 @@
 // controllers/adminController.js
 import Employee from '../models/Employee.model.js';
 import User from '../models/User.js';
+import { sendAdminAddedEmployeeEmail } from '../utils/sendEmail.js';
 
 
 // Add a new employee
@@ -24,17 +25,38 @@ export const addEmployee = async (req, res) => {
             employeeId
         } = req.body;
 
+        console.log(req.body)
         // Validate required fields
-        if (!name || !employeeId || !email || !password || !cnic || !fullName ||
-            !wagePerHour || !weeklyWorkingDays || !phoneNumber || !dailyWorkingHours) {
-            return res.status(400).json({ error: 'Missing required fields' });
+        const requiredFields = {
+            name: 'Employee name',
+            employeeId: 'Employee ID',
+            email: 'Email address',
+            password: 'Password',
+            cnic: 'CNIC',
+            wagePerHour: 'Wage per hour',
+            weeklyWorkingDays: 'Weekly working days',
+            phoneNumber: 'Phone number',
+            dailyWorkingHours: 'Daily working hours'
+        };
+
+        const missingFields = Object.entries(requiredFields)
+            .filter(([field]) => !req.body[field])
+            .map(([_, fieldName]) => fieldName);
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                missingFields: missingFields,
+                message: `The following fields are required: ${missingFields.join(', ')}`
+            });
         }
 
         // Create employee first
-        const newEmployee = new Employee({
-            fullName,
+        const newEmployee = new User({
+            name,
             employeeId,
             cnic,
+            password,
             email,
             phoneNumber,
             wagePerHour: Number(wagePerHour),
@@ -43,34 +65,61 @@ export const addEmployee = async (req, res) => {
             address,
             dailyWorkingHours: Number(dailyWorkingHours),
             shift,
-            employmentType
+            employmentType,
+            isVerified: true
         });
 
         const savedEmployee = await newEmployee.save();
 
-        // Then create user with employee reference
-        const newUser = new User({
-            name,
-            email,
-            password,
-            cnic,
-            role: role || 'waiter',
-            employee: savedEmployee._id
+        // Create user with employee reference
+        // const newUser = new User({
+        //     name,
+        //     email,
+        //     password,
+        //     cnic,
+        //     role: role || 'waiter',
+        //     employee: savedEmployee._id,
+        //     isVerified: true // Automatically verify employee accounts
+        // });
+
+        // const savedUser = await newUser.save();
+
+        // Send welcome email with credentials
+        const emailContent = `
+            <h1>Welcome to Our Team!</h1>
+            <p>Your employee account has been created successfully.</p>
+            <h3>Your Login Credentials:</h3>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Password:</strong> ${password}</p>
+            <p><strong>Employee ID:</strong> ${employeeId}</p>
+            <p><strong>Role:</strong> ${role || 'waiter'}</p>
+            <h3>Employee Details:</h3>
+            <p><strong>Full Name:</strong> ${name}</p>
+            <p><strong>Wage Per Hour:</strong> PKR ${wagePerHour}</p>
+            <p><strong>Working Schedule:</strong> ${dailyWorkingHours} hours/day, ${weeklyWorkingDays} days/week</p>
+            ${shift ? `<p><strong>Shift:</strong> ${shift.start} to ${shift.end}</p>` : ''}
+            <p>Please change your password after first login.</p>
+        `;
+
+        await sendAdminAddedEmployeeEmail({
+            to: email,
+            subject: 'Your Employee Account Credentials',
+            html: emailContent
         });
 
-        const savedUser = await newUser.save();
-
+        // Prepare response data (excluding sensitive fields)
+        const responseData = {
+            _id: savedEmployee._id,
+            name: savedEmployee.name,
+            email: savedEmployee.email,
+            role: savedEmployee.role,
+            employeeId: savedEmployee.employeeId,
+            fullName: savedEmployee.fullName,
+            joiningDate: savedEmployee.joiningDate
+        };
         res.status(201).json({
-            user: {
-                _id: savedUser._id,
-                name: savedUser.name,
-                email: savedUser.email,
-                role: savedUser.role
-            },
-            employee: {
-                _id: savedEmployee._id,
-                fullName: savedEmployee.fullName
-            }
+            message: 'Employee added and user registered successfully',
+            employee: responseData
         });
 
     } catch (err) {
@@ -78,11 +127,14 @@ export const addEmployee = async (req, res) => {
             const field = Object.keys(err.keyPattern)[0];
             res.status(400).json({ error: `${field} already exists` });
         } else if (err.name === 'ValidationError') {
-            console.error('Error adding employee:', err);
+            console.error('Validation Error:', err);
             res.status(400).json({ error: err.message });
         } else {
-            console.error('Error adding employee:', err);
-            res.status(500).json({ error: 'Server error', details: err.message });
+            console.error('Server Error:', err);
+            res.status(500).json({
+                error: 'Failed to add employee',
+                details: process.env.NODE_ENV === 'development' ? err.message : undefined
+            });
         }
     }
 };
