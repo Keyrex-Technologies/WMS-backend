@@ -31,10 +31,10 @@ const userSchema = new mongoose.Schema(
     },
 
     // Employee Information
-    fullName: {
-      type: String,
-      required: function () { return this.role !== 'admin'; }
-    },
+    // fullName: {
+    //   type: String,
+    //   required: function () { return this.role !== 'admin'; }
+    // },
     cnic: {
       type: String,
       required: function () { return this.role !== 'admin'; },

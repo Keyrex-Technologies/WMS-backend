@@ -159,6 +159,7 @@ export async function userSignInController(req, res) {
   try {
     const { email, password } = req.body;
 
+    console.log(req.body)
     if (!email) {
       return res.status(400).json({
         message: "Please provide email",
@@ -174,6 +175,7 @@ export async function userSignInController(req, res) {
 
     const user = await userModel.findOne({ email });
 
+    console.log("user", user)
     if (!user) {
       return res.status(404).json({
         message: "Invalid Credentials!",
