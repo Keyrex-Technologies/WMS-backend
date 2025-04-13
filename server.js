@@ -1,10 +1,15 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import 'dotenv/config'
+import 'dotenv/config';
+import cors from "cors";
 import globalErrorHandler from "./Errors/globalErrorHandler.js";
+
 const app = express();
+
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
+app.use(cors());
 
 // =========================== ALL Imports of Routes  ======================================
 import { FirstRoute, UserRoute } from "./routes/index.routes.js";
@@ -21,7 +26,8 @@ connectDB().then(() => {
 }).catch(err => {
   console.error('Database connection failed', err);
 });
-// first route
+
+// Routes
 app.use("/first", FirstRoute);
 app.use("/user", UserRoute);
 // app.use('/employees', authenticateToken, EmployeeRoutes); // Authenticated employee routes
@@ -30,9 +36,11 @@ app.use('/admin', authenticateToken, AdminRoutes); // Admin routes for role chan
 app.use("*", (req, res) => {
   throw new CustomError(`${req.url} not found`, 404);
 });
-// error handler
+
+// Error handler
 app.use(globalErrorHandler);
 
+// Start the server
 app.listen(4000, () => {
   console.log("Server started on port 4000");
   console.log("Link: http://localhost:4000");
