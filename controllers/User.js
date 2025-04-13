@@ -54,8 +54,9 @@ export async function userSignUpController(req, res) {
     }
     const existingUserVerifiedByEmail = await userModel.findOne({
       email,
-      isVerified: true,
+      // isVerified: true,
     });
+
 
     if (existingUserVerifiedByEmail) {
       return res.status(400).json({
