@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 export async function userSignUpController(req, res) {
   try {
     console.log(req.body);
-    const { email, password, name, cnic, employeeId } = req.body;
+    const { email, password, phoneNumber, name, cnic, employeeId } = req.body;
     if (!email) {
       return res.status(400).json({
         message: "Please provide email",
@@ -17,6 +17,12 @@ export async function userSignUpController(req, res) {
     if (!password) {
       return res.status(400).json({
         message: "Please provide password",
+        success: false,
+      });
+    }
+    if (!phoneNumber) {
+      return res.status(400).json({
+        message: "Please provide phone number",
         success: false,
       });
     }
@@ -84,6 +90,7 @@ export async function userSignUpController(req, res) {
         cnic,
         password,
         employeeId,
+        phoneNumber,
         verifyCode: generatedOtp,
         verifyCodeExpiry: expiryDate,
         isVerified: false,
@@ -407,6 +414,62 @@ export async function forgotPassword(req, res) {
 }
 
 
+//resend otp
+
+export async function resendOtpController(req, res) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Please provide email",
+        success: false,
+      });
+    }
+
+    // Find the user by email
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        message: "User is already verified",
+        success: false,
+      });
+    }
+
+    // Generate a new 4-digit OTP
+    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    // Update user with new OTP and expiry
+    user.verifyCode = generatedOtp;
+    const expiryDate = new Date();
+    user.verifyCodeExpiry = expiryDate.setMinutes(expiryDate.getMinutes() + 15);
+
+    await user.save();
+
+    // Send the new OTP via email
+    await sendEmail(email, generatedOtp, user.name);
+
+    res.status(200).json({
+      success: true,
+      message: "New OTP has been sent to your email",
+    });
+
+  } catch (err) {
+    console.log("Error in resendOtpController:", err);
+    res.status(500).json({
+      message: err.message || "Internal server error",
+      success: false,
+    });
+  }
+}
 export async function verifyOTPresetPassword(req, res) {
   try {
     const { email, otp } = req.body;

@@ -39,22 +39,22 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: function () { return this.role !== 'admin'; },
       unique: true,
-      match: /^\d{5}-\d{7}-\d{1}$/
+      // match: /^\d{5}-\d{7}-\d{1}$/
     },
     wagePerHour: {
       type: Number,
-      required: function () { return this.role !== 'admin'; },
+      // required: function () { return this.role !== 'admin' || 'employee'; },
       min: 0
     },
     weeklyWorkingDays: {
       type: Number,
-      required: function () { return this.role !== 'admin'; },
+      // required: function () { return this.role !== 'admin' || 'employee'; },
       min: 1,
       max: 7
     },
     joiningDate: {
       type: Date,
-      required: function () { return this.role !== 'admin'; },
+      // required: function () { return this.role !== 'admin' || 'employee'; },
       default: Date.now
     },
     address: {
@@ -63,11 +63,11 @@ const userSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: function () { return this.role !== 'admin'; },
-      match: /^03\d{9}$/
+      // match: /^03\d{9}$/
     },
     dailyWorkingHours: {
       type: Number,
-      required: function () { return this.role !== 'admin'; },
+      // required: function () { return this.role !== 'admin' || 'employee'; },
       min: 1,
       max: 24
     },
