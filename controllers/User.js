@@ -311,8 +311,7 @@ export async function updateUserController(req, res) {
       });
     }
     // Remove sensitive fields before sending the response
-    const { password, expiryDate, verifytoken, ...userData } =
-      updatedUser.toObject();
+    const { password, expiryDate, verifytoken, ...userData } = updatedUser.toObject();
     const token = await updatedUser.generateAccessToken();
     const options = {
       httpOnly: true,

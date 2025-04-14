@@ -98,6 +98,11 @@ const userSchema = new mongoose.Schema(
       enum: ['working', 'on-break', 'checked-out', 'on-leave'],
       default: 'checked-out'
     },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'inactive'
+    },
     employeeId: {
       type: String,
       unique: true

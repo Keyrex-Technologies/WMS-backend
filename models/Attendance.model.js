@@ -12,6 +12,17 @@ const attendanceSchema = new mongoose.Schema({
         enum: ['in', 'out'],
         required: true,
     },
+
+    // overtime hours
+    // overtime salary
+    // total hours
+    hours: {
+        type: Number
+    },
+    totalSalary: {
+        type: Number
+    },
+    // total salary
     timestamp: {
         type: Date,
         default: Date.now,

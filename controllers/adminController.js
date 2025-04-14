@@ -22,7 +22,8 @@ export const addEmployee = async (req, res) => {
             dailyWorkingHours,
             shift,
             employmentType,
-            employeeId
+            employeeId,
+            status
         } = req.body;
 
         console.log(req.body)
@@ -36,7 +37,8 @@ export const addEmployee = async (req, res) => {
             wagePerHour: 'Wage per hour',
             weeklyWorkingDays: 'Weekly working days',
             phoneNumber: 'Phone number',
-            dailyWorkingHours: 'Daily working hours'
+            dailyWorkingHours: 'Daily working hours',
+            status: "status not provided"
         };
 
         const missingFields = Object.entries(requiredFields)
@@ -66,7 +68,8 @@ export const addEmployee = async (req, res) => {
             dailyWorkingHours: Number(dailyWorkingHours),
             shift,
             employmentType,
-            isVerified: true
+            isVerified: true,
+            status
         });
 
         const savedEmployee = await newEmployee.save();
@@ -115,7 +118,8 @@ export const addEmployee = async (req, res) => {
             role: savedEmployee.role,
             employeeId: savedEmployee.employeeId,
             fullName: savedEmployee.fullName,
-            joiningDate: savedEmployee.joiningDate
+            joiningDate: savedEmployee.joiningDate,
+            status: savedEmployee.status
         };
         res.status(201).json({
             message: 'Employee added and user registered successfully',
@@ -209,3 +213,93 @@ export const getAllEmployees = async (req, res) => {
         });
     }
 };
+
+//uodate employee data
+export const updateEmployee = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+        const updates = req.body;
+
+        // Remove sensitive fields that shouldn't be updated
+        delete updates.password;
+        delete updates.email;
+        delete updates.employeeId;
+
+        // Validate if employee exists
+        const employee = await User.findById(employeeId);
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        // Update employee
+        const updatedEmployee = await User.findByIdAndUpdate(
+            id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        ).select('-password');
+
+        res.json({
+            message: 'Employee updated successfully',
+            employee: updatedEmployee
+        });
+    } catch (err) {
+        if (err.name === 'ValidationError') {
+            res.status(400).json({ error: err.message });
+        } else {
+            console.error(err);
+            res.status(500).json({ error: 'Failed to update employee' });
+        }
+    }
+};
+
+//delete employee
+export const deleteEmployee = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        // Check if employee exists
+        const employee = await User.findById(employeeId);
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        // Soft delete (recommended)
+        await User.findByIdAndUpdate(employeeId, { isActive: false, deletedAt: new Date() });
+
+        // Or hard delete
+        // await User.findByIdAndDelete(id);
+
+        res.json({ message: 'Employee deleted successfully' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to delete employee' });
+    }
+};
+
+// employee status
+export const getEmployeeStatus = async (req, res) => {
+    try {
+        const { employeeId } = req.params;
+
+        // Find employee and only return the status fields
+        const employee = await User.findById(employeeId)
+            .select('isApproved isActive employeeId name email');
+
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        res.json({
+            employeeId: employee.employeeId,
+            name: employee.name,
+            email: employee.email,
+            isApproved: employee.isApproved || false,
+            isActive: employee.isActive !== false // Default to true if undefined
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch employee status' });
+    }
+};
+
+
