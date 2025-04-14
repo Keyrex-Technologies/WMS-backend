@@ -95,6 +95,7 @@ export async function userSignUpController(req, res) {
         verifyCode: generatedOtp,
         verifyCodeExpiry: expiryDate,
         isVerified: false,
+
       });
       await newUser.save();
     }
@@ -219,6 +220,7 @@ export async function userSignInController(req, res) {
         email: user.email,
         name: user.name,
         isVerified: user.isVerified,
+        role: user.role
       };
       const options = {
         httpOnly: true,
