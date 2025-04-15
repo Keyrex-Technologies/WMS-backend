@@ -8,7 +8,7 @@ const router = Router();
 
 router.post('/mark', markAttendance);
 router.get('/payroll/:employeeId', getPayroll);
-router.get('/attendance/today', getTodayAttendance);
+router.get('/today', getTodayAttendance);
 
 // Attendance routes
 router.get('/stats', getAttendanceStats);

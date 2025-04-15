@@ -8,98 +8,143 @@ import { calculatePayroll } from "../utils/payroll.js";
 export const markAttendance = async (req, res) => {
     try {
         const { employeeId, type, status } = req.body;
-        console.log("req.body", req.body)
+        console.log("Request body:", req.body);
+
         // Validate required fields
         if (!employeeId || !type || !status) {
             return res.status(400).json({
+                success: false,
                 error: 'Missing required fields',
                 required: ['employeeId', 'type', 'status']
             });
         }
 
-        // Find employee by either MongoDB _id or custom employeeId
-        const employee = await User.findOne({
-            $or: [
-                // { _id: employeeId },          // Try as MongoDB ID
-                { employeeId: employeeId }     // Try as custom employee ID
-            ]
-        });
+        // Trim and validate input strings
+        const trimmedEmployeeId = employeeId.trim();
+        const trimmedType = type.trim().toLowerCase();
+        const trimmedStatus = status.trim().toLowerCase();
 
+        if (!trimmedEmployeeId || !trimmedType || !trimmedStatus) {
+            return res.status(400).json({
+                success: false,
+                error: 'Fields cannot be empty or whitespace only'
+            });
+        }
+
+        // Find employee by custom employeeId
+        const employee = await User.findOne({ employeeId: trimmedEmployeeId });
         if (!employee) {
             return res.status(404).json({
+                success: false,
                 error: 'Employee not found',
-                searchedId: employeeId,
-                suggestion: 'Try with either MongoDB _id or employeeId (like KCH-0456)'
+                searchedId: trimmedEmployeeId
             });
         }
 
         // Check if employee is active
         if (employee.status === 'inactive') {
             return res.status(400).json({
+                success: false,
                 error: 'Employee account is inactive',
                 employeeName: employee.name,
-                employeeId: employee.employeeId, // Return the custom ID
-                mongoId: employee._id             // Return MongoDB ID for reference
+                employeeId: employee.employeeId
             });
         }
 
         // Validate attendance type and status
         const validTypes = ['check-in', 'check-out', 'break-start', 'break-end'];
-        const validStatuses = ['present', 'late', 'half-day', 'on-leave', 'Absent'];
+        const validStatuses = ['present', 'late', 'half-day', 'on-leave'];
 
-        if (!validTypes.includes(type)) {
+        if (!validTypes.includes(trimmedType)) {
             return res.status(400).json({
+                success: false,
                 error: 'Invalid attendance type',
                 validTypes,
-                receivedType: type
+                receivedType: trimmedType
             });
         }
 
-        if (!validStatuses.includes(status)) {
+        if (!validStatuses.includes(trimmedStatus)) {
             return res.status(400).json({
+                success: false,
                 error: 'Invalid attendance status',
                 validStatuses,
-                receivedStatus: status
+                receivedStatus: trimmedStatus
             });
+        }
+
+        // Create timestamp
+        const timestamp = new Date();
+        const dateString = timestamp.toLocaleDateString();
+        const timeString = timestamp.toLocaleTimeString();
+
+        // Check for existing check-in if marking check-out
+        if (trimmedType === 'check-out') {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+
+            const existingCheckIn = await AttendanceModel.findOne({
+                employeeId: trimmedEmployeeId,
+                type: 'check-in',
+                timestamp: { $gte: todayStart }
+            });
+
+            if (!existingCheckIn) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Cannot check out without checking in first',
+                    employeeId: trimmedEmployeeId,
+                    employeeName: employee.name
+                });
+            }
         }
 
         // Create attendance record
         const attendanceRecord = new AttendanceModel({
-            employeeId: employee.employeeId, // Store custom ID (KCH-0456)
-            type,
-            status,
-            role: employee.role,
+            employeeId: employee.employeeId,
             employeeName: employee.name,
-            department: employee.department || 'Unassigned'
+            type: trimmedType,
+            status: trimmedStatus,
+            role: employee.role,
+            department: employee.department || 'Unassigned',
+            date: dateString,
+            time: timeString,
+            timestamp
         });
 
         await attendanceRecord.save();
 
-        // Successful response
-        res.status(201).json({
+        // Prepare response
+        const response = {
             success: true,
-            message: 'Attendance recorded successfully',
+            message: `${trimmedType} recorded successfully`,
             record: {
                 id: attendanceRecord._id,
-                employeeId: employee.employeeId, // Return the custom ID
+                employeeId: employee.employeeId,
                 employeeName: employee.name,
-                type,
-                status,
-                time: attendanceRecord.createdAt
+                type: trimmedType,
+                status: trimmedStatus,
+                date: dateString,
+                time: timeString,
+                timestamp
             }
-        });
+        };
+
+        res.status(201).json(response);
 
     } catch (error) {
         console.error('Attendance recording error:', error);
 
         if (error.name === 'ValidationError') {
             return res.status(400).json({
+                success: false,
                 error: 'Validation failed',
                 details: error.message
             });
         }
 
         res.status(500).json({
+            success: false,
             error: 'Failed to record attendance',
             message: process.env.NODE_ENV === 'development'
                 ? error.message
@@ -187,66 +232,76 @@ export const getPayroll = async (req, res) => {
 //         res.status(500).json({ error: err.message });
 //     }
 // };
-
 export const getTodayAttendance = async (req, res) => {
     try {
-        // Get today's date range
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
+        console.log("first")
+        // Get current date in local timezone
+        const now = new Date();
+        const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-        // Get end of today (just before midnight)
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        // 1. Get all employees first
-        const allEmployees = await User.find({ role: 'employee' });
-
-        // 2. Get today's attendance records
-        const todayAttendance = await AttendanceModel.find({
-            createdAt: { $gte: startOfDay, $lt: endOfDay }
-        }).sort({ createdAt: -1 });
-
-        // 3. Transform into the desired format
-        const attendanceSummary = allEmployees.map(employee => {
-            // Find all attendance records for this employee today
-            const employeeRecords = todayAttendance.filter(
-                record => record.employeeId === employee.employeeId ||
-                    record.employeeId === employee._id.toString()
-            );
-
-            // Find clock-in and clock-out records
-            const clockInRecord = employeeRecords.find(r => r.type === 'check-in');
-            const clockOutRecord = employeeRecords.find(r => r.type === 'check-out');
-
-            // Determine status
-            let status = 'Absent';
-            if (clockInRecord) {
-                status = clockOutRecord ? 'Present' : 'Working';
+        // Get all attendance records for today
+        const attendanceRecords = await AttendanceModel.find({
+            timestamp: {
+                $gte: startOfDay,
+                $lte: endOfDay
             }
+        }).sort({ timestamp: 1 }); // Sort by timestamp ascending
 
-            return {
-                employeeId: employee.employeeId,
-                name: employee.name,
-                clockIn: clockInRecord
-                    ? clockInRecord.createdAt.toLocaleTimeString()
-                    : 'Not clocked in',
-                clockOut: clockOutRecord
-                    ? clockOutRecord.createdAt.toLocaleTimeString()
-                    : 'Not clocked out',
-                status: status,
-                records: employeeRecords // Optional: include all raw records
-            };
+        // Transform records to include employee details
+        const detailedRecords = await Promise.all(
+            attendanceRecords.map(async (record) => {
+                const employee = await User.findOne({
+                    employeeId: record.employeeId
+                });
+
+                return {
+                    id: record._id,
+                    employeeId: record.employeeId,
+                    name: employee?.name || 'Unknown Employee',
+                    type: record.type,
+                    status: record.status,
+                    department: employee?.department || 'Unassigned',
+                    timestamp: record.timestamp,
+                    formattedTime: formatTime(record.timestamp),
+                    formattedDate: formatDate(record.timestamp)
+                };
+            })
+        );
+
+        res.status(200).json({
+            date: formatDate(startOfDay),
+            totalRecords: detailedRecords.length,
+            records: detailedRecords
         });
 
-        res.json(attendanceSummary);
-    } catch (err) {
-        console.error('Error fetching attendance:', err);
+    } catch (error) {
+        console.error('Error fetching attendance:', error);
         res.status(500).json({
             error: 'Failed to fetch attendance',
-            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+            message: process.env.NODE_ENV === 'development'
+                ? error.message
+                : 'Internal server error'
         });
     }
 };
+
+// Helper functions
+function formatTime(date) {
+    return new Date(date).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+function formatDate(date) {
+    return new Date(date).toLocaleDateString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
 
 export const getAllAttendance = async (req, res) => {
     try {
@@ -310,6 +365,7 @@ export const getAttendanceStats = async (req, res) => {
 
 // get employee attendence
 export const getEmployeeAttendance = async (req, res) => {
+    console.log("getEmployeeAttendance")
     try {
         // Get today's date range
         const startOfDay = new Date();
