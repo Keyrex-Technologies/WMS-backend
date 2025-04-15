@@ -44,10 +44,10 @@ const employeeSchema = new mongoose.Schema({
         enum: ['admin', 'manager', 'employee'],
         default: 'waiter'
     },
-    shift: {
-        start: { type: String, match: /^([01]\d|2[0-3]):([0-5]\d)$/ }, // HH:MM format
-        end: { type: String, match: /^([01]\d|2[0-3]):([0-5]\d)$/ }
-    },
+    // shift: {
+    //     start: { type: String, match: /^([01]\d|2[0-3]):([0-5]\d)$/ }, // HH:MM format
+    //     end: { type: String, match: /^([01]\d|2[0-3]):([0-5]\d)$/ }
+    // },
     wagePerHour: {
         type: Number,
         required: true,

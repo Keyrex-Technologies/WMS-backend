@@ -94,12 +94,11 @@ export const addEmployee = async (req, res) => {
             <p><strong>Email:</strong> ${email}</p>
             <p><strong>Password:</strong> ${password}</p>
             <p><strong>Employee ID:</strong> ${employeeId}</p>
-            <p><strong>Role:</strong> ${role || 'waiter'}</p>
+            <p><strong>Role:</strong> ${role || 'employee'}</p>
             <h3>Employee Details:</h3>
             <p><strong>Full Name:</strong> ${name}</p>
             <p><strong>Wage Per Hour:</strong> PKR ${wagePerHour}</p>
             <p><strong>Working Schedule:</strong> ${dailyWorkingHours} hours/day, ${weeklyWorkingDays} days/week</p>
-            ${shift ? `<p><strong>Shift:</strong> ${shift.start} to ${shift.end}</p>` : ''}
             <p>Please change your password after first login.</p>
         `;
 
