@@ -307,7 +307,7 @@ export const getAllEmployees = async (req, res) => {
     try {
         // Find all users with employee role (adjust the query as needed)
         const employees = await User.find({ role: 'employee' })
-            .select('name email role status currentStatus employeeId')
+            .select('name email role status wagePerHour employeeId')
             .sort({ createdAt: -1 });
 
         res.json(employees);
@@ -329,7 +329,7 @@ export const getEmployeeById = async (req, res) => {
             role: 'employee',
             employeeId: employeeId
         })
-            .select('name email role status wagePerHour employeeId');
+            .select('name email role status wagePerHour employeeId dailyWorkingHours phoneNumber weeklyWorkingDays');
 
         if (!employee) {
             return res.status(404).json({ error: 'Employee not found' });
