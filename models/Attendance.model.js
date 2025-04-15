@@ -67,15 +67,18 @@ const attendanceSchema = new mongoose.Schema(
             // match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
         },
         checkin_time: {
-            type: Date
+            type: Date,
+            default: null
         },
         checkout_time: {
-            type: Date
+            type: Date,
+            default: null
         },
         working_hours: {
             type: Number,
             min: 0,
-            max: 24
+            max: 24,
+            default: 0
         },
 
     },
