@@ -2,14 +2,14 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { checkRole } from '../middleware/auth.js';
-import { updateUserRole, updateHourlyRate, addEmployee, updateEmployee, deleteEmployee, getEmployeeStatus, getAllEmployees } from '../controllers/adminController.js';
+import { updateUserRole, updateHourlyRate, addEmployee, updateEmployee, deleteEmployee, getEmployeeStatus, getAllEmployees, getEmployeeById } from '../controllers/adminController.js';
 
 const router = express.Router();
 
 // emplyee update and delete routes
 router.put('/employees/:employeeId', updateEmployee);
 router.delete('/employees/:employeeId', deleteEmployee);
-
+router.get('/employees/:employeeId', getEmployeeById);
 // Get all employees
 router.get('/employees', getAllEmployees);
 // Get employee status

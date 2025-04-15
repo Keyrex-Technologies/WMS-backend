@@ -318,3 +318,29 @@ export const getAllEmployees = async (req, res) => {
 };
 
 
+//get Single Employee
+export const getEmployeeById = async (req, res) => {
+    try {
+        const { employeeId } = req.params; // Assuming you're passing the ID as a URL parameter
+
+        // console.log("first,req", req.params)
+        // Find the employee with the matching employeeId
+        const employee = await User.findOne({
+            role: 'employee',
+            employeeId: employeeId
+        })
+            .select('name email role status wagePerHour employeeId');
+
+        if (!employee) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+
+        res.json(employee);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch employee' });
+    }
+};
+
+
+
