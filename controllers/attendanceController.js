@@ -409,17 +409,75 @@ export const getEmployeeAttendance = async (req, res) => {
     }
 };
 
-// module.exports = {
-//     markAttendance,
-//     getPayroll
-// };
 
-{
-    ("dailysalary");
-    ("empid");
-    ("empname");
-    ("checkin ");
-    ("cout");
-    ("monthlySalary");
-    ("wageperhour");
-}
+
+// Socket-enabled controller methods
+export const socketCheckIn = async (req) => {
+    const { employeeId, employeeName, email, role } = req.body;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Check for existing check-in
+    const existing = await Attendance.findOne({
+        email,
+        date: today,
+        checkin_time: { $ne: null },
+        checkout_time: null
+    });
+
+    if (existing) {
+        throw new Error('You have already checked in today');
+    }
+
+    const attendance = new Attendance({
+        employeeId,
+        employeeName,
+        email,
+        role,
+        status: 'present',
+        date: today,
+        checkin_time: new Date(),
+        working_hours: 0
+    });
+
+    await attendance.save();
+
+    return {
+        success: true,
+        message: 'Check-in recorded successfully',
+        attendance
+    };
+};
+
+export const socketCheckOut = async (req) => {
+    const { email } = req.body;
+    const today = new Date().toISOString().split('T')[0];
+
+    const attendance = await Attendance.findOne({
+        email,
+        date: today,
+        checkin_time: { $ne: null },
+        checkout_time: null
+    });
+
+    if (!attendance) {
+        throw new Error('No active check-in found for today');
+    }
+
+    const checkoutTime = new Date();
+    const workingHours = (checkoutTime - attendance.checkin_time) / (1000 * 60 * 60);
+
+    attendance.checkout_time = checkoutTime;
+    attendance.working_hours = workingHours;
+
+    if (workingHours < 4) {
+        attendance.status = 'half-day';
+    }
+
+    await attendance.save();
+
+    return {
+        success: true,
+        message: 'Check-out recorded successfully',
+        attendance
+    };
+};

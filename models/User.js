@@ -31,30 +31,23 @@ const userSchema = new mongoose.Schema(
     },
 
     // Employee Information
-    // fullName: {
-    //   type: String,
-    //   required: function () { return this.role !== 'admin'; }
-    // },
+
     cnic: {
       type: String,
       required: function () { return this.role !== 'admin'; },
       unique: true,
-      // match: /^\d{5}-\d{7}-\d{1}$/
     },
     wagePerHour: {
       type: Number,
-      // required: function () { return this.role !== 'admin' || 'employee'; },
       min: 0
     },
     weeklyWorkingDays: {
       type: Number,
-      // required: function () { return this.role !== 'admin' || 'employee'; },
       min: 1,
       max: 7
     },
     joiningDate: {
       type: Date,
-      // required: function () { return this.role !== 'admin' || 'employee'; },
       default: Date.now
     },
     address: {
@@ -63,40 +56,16 @@ const userSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       required: function () { return this.role !== 'admin'; },
-      // match: /^03\d{9}$/
     },
     dailyWorkingHours: {
       type: Number,
-      // required: function () { return this.role !== 'admin' || 'employee'; },
       min: 1,
       max: 24
     },
-    shift: {
-      start: {
-        type: String,
-        match: /^([01]\d|2[0-3]):([0-5]\d)$/
-      },
-      end: {
-        type: String,
-        match: /^([01]\d|2[0-3]):([0-5]\d)$/
-      }
-    },
-    // employmentType: {
-    //   type: String,
-    //   enum: ['full-time', 'part-time', 'contract'],
-    //   default: 'full-time'
-    // },
+
     isActive: {
       type: Boolean,
       default: true
-    },
-    lastAttendance: {
-      type: Date
-    },
-    currentStatus: {
-      type: String,
-      enum: ['working', 'on-break', 'checked-out', 'on-leave'],
-      default: 'checked-out'
     },
     status: {
       type: String,
@@ -107,12 +76,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true
     },
-    monthlySalary: {
-      type: String,
-      // unique: true
-    },
-
-    // Account Verification
     verifyCode: {
       type: String,
     },

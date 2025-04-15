@@ -9,42 +9,42 @@ import { markAttendance, getPayroll, getTodayAttendance, getAttendanceStats, get
 
 const router = Router();
 
-// router.post('/check-in', async (req, res) => {
-//     try {
-//         const result = await AttendanceController.checkIn(req.body);
 
-//         // Emit socket event
-//         const io = getIO();
-//         io.emit('attendance-update', {
-//             type: 'check-in',
-//             user: req.user, // Assuming you have user data from auth middleware
-//             data: result,
-//             time: new Date()
-//         });
+// Socket.IO enabled routes
+router.post('/socket-check-in', async (req, res) => {
+    try {
+        const result = await socketCheckIn(req);
 
-//         res.status(200).json(result);
-//     } catch (error) {
-//         res.status(400).json({ error: error.message });
-//     }
-// });
+        // Emit to all connected clients
+        getIO().emit('attendance-update', {
+            type: 'check-in',
+            user: req.user,
+            data: result,
+            time: new Date()
+        });
 
-// router.post('/check-out', async (req, res) => {
-//     try {
-//         const result = await AttendanceController.checkOut(req.body);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
 
-//         const io = getIO();
-//         io.emit('attendance-update', {
-//             type: 'check-out',
-//             user: req.user,
-//             data: result,
-//             time: new Date()
-//         });
+router.post('/socket-check-out', async (req, res) => {
+    try {
+        const result = await socketCheckOut(req);
 
-//         res.status(200).json(result);
-//     } catch (error) {
-//         res.status(400).json({ error: error.message });
-//     }
-// });
+        getIO().emit('attendance-update', {
+            type: 'check-out',
+            user: req.user,
+            data: result,
+            time: new Date()
+        });
+
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
 
 
 router.post('/mark', markAttendance);
