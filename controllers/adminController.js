@@ -64,8 +64,8 @@ export const addEmployee = async (req, res) => {
             joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
             address,
             dailyWorkingHours: Number(dailyWorkingHours),
-            shift,
-            monthlySalary,
+            // shift,
+            // monthlySalary,
             // employmentType,
             isVerified: true,
             status
@@ -116,7 +116,7 @@ export const addEmployee = async (req, res) => {
             email: savedEmployee.email,
             role: savedEmployee.role,
             employeeId: savedEmployee.employeeId,
-            fullName: savedEmployee.fullName,
+            // fullName: savedEmployee.fullName,
             joiningDate: savedEmployee.joiningDate,
             status: savedEmployee.status
         };
