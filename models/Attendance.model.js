@@ -53,21 +53,31 @@ const attendanceSchema = new mongoose.Schema(
     {
         employeeId: { type: String, required: true },
         employeeName: { type: String, required: true },
-        type: {
-            type: String,
-            required: true,
-            enum: ["check-in", "check-out", "break-start", "break-end"],
-        },
         status: {
             type: String,
             required: true,
-            enum: ["present", "late", "half-day", "on-leave"],
+            enum: ["present", "late", "absent"],
         },
-        role: { type: String }, // From employee
-        department: { type: String }, // From employee
-        date: { type: String }, // Formatted date string
-        time: { type: String }, // Formatted time string
-        timestamp: { type: Date, required: true }, // Actual timestamp
+        role: { type: String },
+        date: { type: String },
+
+        email: {
+            type: String,
+            required: true,
+            // match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
+        },
+        checkin_time: {
+            type: Date
+        },
+        checkout_time: {
+            type: Date
+        },
+        working_hours: {
+            type: Number,
+            min: 0,
+            max: 24
+        },
+
     },
     { timestamps: true }
 );
