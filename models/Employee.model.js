@@ -41,7 +41,7 @@ const employeeSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'manager', 'chef', 'waiter', 'cashier'],
+        enum: ['admin', 'manager', 'employee'],
         default: 'waiter'
     },
     shift: {
@@ -59,11 +59,11 @@ const employeeSchema = new mongoose.Schema({
         min: 1,
         max: 7
     },
-    employmentType: {
-        type: String,
-        enum: ['full-time', 'part-time', 'contract'],
-        default: 'full-time'
-    },
+    // employmentType: {
+    //     type: String,
+    //     enum: ['full-time', 'part-time', 'contract'],
+    //     default: 'full-time'
+    // },
     isActive: { type: Boolean, default: true },
     lastAttendance: { type: Date },
     currentStatus: {

@@ -9,10 +9,13 @@ const attendanceSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['in', 'out'],
+        enum: ['check-in', 'check-out'],
         required: true,
     },
-
+    status: {
+        type: String,
+        emun: ['present', 'late', 'half-day', 'on-leave', 'Absent']
+    },
     // overtime hours
     // overtime salary
     // total hours

@@ -2,7 +2,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth.js';
 import { checkRole } from '../middleware/auth.js';
-import { updateUserRole, updateHourlyRate, addEmployee, updateEmployee, deleteEmployee, getEmployeeStatus } from '../controllers/adminController.js';
+import { updateUserRole, updateHourlyRate, addEmployee, updateEmployee, deleteEmployee, getEmployeeStatus, getAllEmployees } from '../controllers/adminController.js';
 
 const router = express.Router();
 
@@ -10,6 +10,8 @@ const router = express.Router();
 router.put('/employees/:employeeId', updateEmployee);
 router.delete('/employees/:employeeId', deleteEmployee);
 
+// Get all employees
+router.get('/employees', getAllEmployees);
 // Get employee status
 router.get('/employees/status/:employeeId', getEmployeeStatus);
 

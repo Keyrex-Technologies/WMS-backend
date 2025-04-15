@@ -1,5 +1,5 @@
 // controllers/adminController.js
-import Employee from '../models/Employee.model.js';
+// import Employee from '../models/Employee.model.js';
 import User from '../models/User.js';
 import { sendAdminAddedEmployeeEmail } from '../utils/sendEmail.js';
 
@@ -21,7 +21,6 @@ export const addEmployee = async (req, res) => {
             phoneNumber,
             dailyWorkingHours,
             shift,
-            employmentType,
             employeeId,
             status
         } = req.body;
@@ -67,7 +66,8 @@ export const addEmployee = async (req, res) => {
             address,
             dailyWorkingHours: Number(dailyWorkingHours),
             shift,
-            employmentType,
+            monthlySalary,
+            // employmentType,
             isVerified: true,
             status
         });
@@ -197,22 +197,22 @@ export const updateHourlyRate = async (req, res) => {
 };
 
 //get all employees
-export const getAllEmployees = async (req, res) => {
-    try {
-        // Get all employees from the database
-        const employees = await Employee.find({})
-            .sort({ joiningDate: -1 }) // Sort by joining date (newest first)
-            .select('-__v'); // Exclude the version key field
+// export const getAllEmployees = async (req, res) => {
+//     try {
+//         // Get all employees from the database
+//         const employees = await Employee.find({})
+//             .sort({ joiningDate: -1 }) // Sort by joining date (newest first)
+//             .select('-__v'); // Exclude the version key field
 
-        res.json(employees);
-    } catch (err) {
-        console.error('Error fetching employees:', err);
-        res.status(500).json({
-            error: 'Failed to fetch employees',
-            details: err.message
-        });
-    }
-};
+//         res.json(employees);
+//     } catch (err) {
+//         console.error('Error fetching employees:', err);
+//         res.status(500).json({
+//             error: 'Failed to fetch employees',
+//             details: err.message
+//         });
+//     }
+// };
 
 //uodate employee data
 export const updateEmployee = async (req, res) => {
@@ -299,6 +299,22 @@ export const getEmployeeStatus = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch employee status' });
+    }
+};
+
+// Get all employee
+
+export const getAllEmployees = async (req, res) => {
+    try {
+        // Find all users with employee role (adjust the query as needed)
+        const employees = await User.find({ role: 'employee' })
+            .select('name email role status currentStatus employeeId')
+            .sort({ createdAt: -1 });
+
+        res.json(employees);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch employees' });
     }
 };
 

@@ -81,11 +81,11 @@ const userSchema = new mongoose.Schema(
         match: /^([01]\d|2[0-3]):([0-5]\d)$/
       }
     },
-    employmentType: {
-      type: String,
-      enum: ['full-time', 'part-time', 'contract'],
-      default: 'full-time'
-    },
+    // employmentType: {
+    //   type: String,
+    //   enum: ['full-time', 'part-time', 'contract'],
+    //   default: 'full-time'
+    // },
     isActive: {
       type: Boolean,
       default: true
@@ -106,6 +106,10 @@ const userSchema = new mongoose.Schema(
     employeeId: {
       type: String,
       unique: true
+    },
+    monthlySalary: {
+      type: String,
+      // unique: true
     },
 
     // Account Verification

@@ -31,7 +31,7 @@ connectDB().then(() => {
 app.use("/first", FirstRoute);
 app.use("/user", UserRoute);
 // app.use('/employees', authenticateToken, EmployeeRoutes); // Authenticated employee routes
-app.use('/attendance', authenticateToken, AttendanceRoutes); // Authenticated attendance routes
+app.use('/attendance', AttendanceRoutes); // Authenticated attendance routes
 app.use('/admin', authenticateToken, AdminRoutes); // Admin routes for role change
 app.use("*", (req, res) => {
   throw new CustomError(`${req.url} not found`, 404);

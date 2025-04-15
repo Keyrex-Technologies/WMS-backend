@@ -10,16 +10,104 @@ import { calculatePayroll } from "../utils/payroll.js";
 // Mark attendance
 export const markAttendance = async (req, res) => {
     try {
-        console.log("first")
-        const { employeeId, type } = req.body;
+        const { employeeId, type, status } = req.body;
+        console.log("req.body", req.body)
+        // Validate required fields
+        if (!employeeId || !type || !status) {
+            return res.status(400).json({
+                error: 'Missing required fields',
+                required: ['employeeId', 'type', 'status']
+            });
+        }
 
-        console.log(req.body)
-        const newEntry = new AttendanceModel({ employeeId, type });
-        await newEntry.save();
-        res.json({ message: 'Attendance marked' });
-    } catch (err) {
-        console.log(err)
-        res.status(400).json({ error: err.message });
+        // Find employee by either MongoDB _id or custom employeeId
+        const employee = await User.findOne({
+            $or: [
+                // { _id: employeeId },          // Try as MongoDB ID
+                { employeeId: employeeId }     // Try as custom employee ID
+            ]
+        });
+
+        if (!employee) {
+            return res.status(404).json({
+                error: 'Employee not found',
+                searchedId: employeeId,
+                suggestion: 'Try with either MongoDB _id or employeeId (like KCH-0456)'
+            });
+        }
+
+        // Check if employee is active
+        if (employee.status === 'inactive') {
+            return res.status(400).json({
+                error: 'Employee account is inactive',
+                employeeName: employee.name,
+                employeeId: employee.employeeId, // Return the custom ID
+                mongoId: employee._id             // Return MongoDB ID for reference
+            });
+        }
+
+        // Validate attendance type and status
+        const validTypes = ['check-in', 'check-out', 'break-start', 'break-end'];
+        const validStatuses = ['present', 'late', 'half-day', 'on-leave', 'Absent'];
+
+        if (!validTypes.includes(type)) {
+            return res.status(400).json({
+                error: 'Invalid attendance type',
+                validTypes,
+                receivedType: type
+            });
+        }
+
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                error: 'Invalid attendance status',
+                validStatuses,
+                receivedStatus: status
+            });
+        }
+
+        // Create attendance record
+        const attendanceRecord = new AttendanceModel({
+            employeeId: employee.employeeId, // Store custom ID (KCH-0456)
+            type,
+            status,
+            role: employee.role,
+            employeeName: employee.name,
+            department: employee.department || 'Unassigned'
+        });
+
+        await attendanceRecord.save();
+
+        // Successful response
+        res.status(201).json({
+            success: true,
+            message: 'Attendance recorded successfully',
+            record: {
+                id: attendanceRecord._id,
+                employeeId: employee.employeeId, // Return the custom ID
+                employeeName: employee.name,
+                type,
+                status,
+                time: attendanceRecord.createdAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Attendance recording error:', error);
+
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                error: 'Validation failed',
+                details: error.message
+            });
+        }
+
+        res.status(500).json({
+            error: 'Failed to record attendance',
+            message: process.env.NODE_ENV === 'development'
+                ? error.message
+                : 'Internal server error'
+        });
     }
 };
 
@@ -103,26 +191,60 @@ export const getPayroll = async (req, res) => {
 
 export const getTodayAttendance = async (req, res) => {
     try {
-        // Get today's date at midnight (start of day)
+        // Get today's date range
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
-        // Get end of today (just before midnight)
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
-        // Query all attendance records for today
+        // 1. Get all employees first
+        const allEmployees = await User.find({ role: 'employee' });
+
+        // 2. Get today's attendance records
         const todayAttendance = await AttendanceModel.find({
-            createdAt: {
-                $gte: startOfDay,
-                $lt: endOfDay
-            }
+            createdAt: { $gte: startOfDay, $lt: endOfDay }
         }).sort({ createdAt: -1 });
 
-        res.json(todayAttendance);
+        // 3. Transform into the desired format
+        const attendanceSummary = allEmployees.map(employee => {
+            // Find all attendance records for this employee today
+            const employeeRecords = todayAttendance.filter(
+                record => record.employeeId === employee.employeeId ||
+                    record.employeeId === employee._id.toString()
+            );
+
+            // Find clock-in and clock-out records
+            const clockInRecord = employeeRecords.find(r => r.type === 'check-in');
+            const clockOutRecord = employeeRecords.find(r => r.type === 'check-out');
+
+            // Determine status
+            let status = 'Absent';
+            if (clockInRecord) {
+                status = clockOutRecord ? 'Present' : 'Working';
+            }
+
+            return {
+                employeeId: employee.employeeId,
+                name: employee.name,
+                clockIn: clockInRecord
+                    ? clockInRecord.createdAt.toLocaleTimeString()
+                    : 'Not clocked in',
+                clockOut: clockOutRecord
+                    ? clockOutRecord.createdAt.toLocaleTimeString()
+                    : 'Not clocked out',
+                status: status,
+                records: employeeRecords // Optional: include all raw records
+            };
+        });
+
+        res.json(attendanceSummary);
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ error: err.message });
+        console.error('Error fetching attendance:', err);
+        res.status(500).json({
+            error: 'Failed to fetch attendance',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 };
 
