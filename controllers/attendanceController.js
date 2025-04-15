@@ -4,9 +4,6 @@ import AttendanceModel from "../models/Attendance.model.js";
 import User from "../models/User.js";
 import { calculatePayroll } from "../utils/payroll.js";
 
-
-
-
 // Mark attendance
 export const markAttendance = async (req, res) => {
     try {
@@ -114,23 +111,25 @@ export const markAttendance = async (req, res) => {
 // Calculate payroll
 export const getPayroll = async (req, res) => {
     try {
-
-        const { employeeId } = req.query
-        console.log("employeeId", employeeId)
+        const { employeeId } = req.query;
+        console.log("employeeId", employeeId);
         // Basic validation - check if string is not empty
-        if (!employeeId || typeof employeeId !== 'string' || employeeId.trim() === '') {
+        if (
+            !employeeId ||
+            typeof employeeId !== "string" ||
+            employeeId.trim() === ""
+        ) {
             return res.status(400).json({
-                error: "Invalid employee ID - must be a non-empty string"
+                error: "Invalid employee ID - must be a non-empty string",
             });
         }
         const { daily, weekly, monthly } = await calculatePayroll(employeeId);
         res.json({ daily, weekly, monthly });
     } catch (err) {
-        console.log(err)
+        console.log(err);
         res.status(500).json({ error: err.message });
     }
 };
-
 
 // Get today's attendance
 // export const getTodayAttendance = async (req, res) => {
@@ -195,6 +194,7 @@ export const getTodayAttendance = async (req, res) => {
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
 
+        // Get end of today (just before midnight)
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
@@ -248,6 +248,20 @@ export const getTodayAttendance = async (req, res) => {
     }
 };
 
+export const getAllAttendance = async (req, res) => {
+    try {
+        const todayAttendance = await AttendanceModel.find();
+        if (!todayAttendance && todayAttendance.length < 1) {
+            return res.json({ attendance: [] });
+        } else {
+            return res.json({ attendance: todayAttendance });
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 //get stats
 export const getAttendanceStats = async (req, res) => {
     try {
@@ -260,35 +274,37 @@ export const getAttendanceStats = async (req, res) => {
 
         // Get total employee count
         const totalEmployees = await User.countDocuments({
-            role: 'employee',
-            isActive: true
+            role: "employee",
+            isActive: true,
         });
 
         // Get today's attendance records
         const todayAttendance = await AttendanceModel.find({
             date: {
                 $gte: startOfDay,
-                $lte: endOfDay
-            }
+                $lte: endOfDay,
+            },
         });
 
         // Calculate stats
-        const presentCount = todayAttendance.filter(a => a.status !== 'Absent').length;
-        const attendancePercentage = totalEmployees > 0
-            ? Math.round((presentCount / totalEmployees) * 100)
-            : 0;
+        const presentCount = todayAttendance.filter(
+            (a) => a.status !== "Absent"
+        ).length;
+        const attendancePercentage =
+            totalEmployees > 0
+                ? Math.round((presentCount / totalEmployees) * 100)
+                : 0;
 
         res.json({
             totalEmployees,
             attendancePercentage,
             presentCount,
             absentCount: totalEmployees - presentCount,
-            summary: `${attendancePercentage}% (${presentCount}/${totalEmployees} employees present)`
+            summary: `${attendancePercentage}% (${presentCount}/${totalEmployees} employees present)`,
         });
-
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to fetch attendance stats' });
+        res.status(500).json({ error: "Failed to fetch attendance stats" });
     }
 };
 
@@ -304,37 +320,36 @@ export const getEmployeeAttendance = async (req, res) => {
 
         // Get all employees and their attendance
         const employees = await User.find({
-            role: 'employee',
-            isActive: true
-        }).select('name employeeId');
+            role: "employee",
+            isActive: true,
+        }).select("name employeeId");
 
         const attendanceRecords = await AttendanceModel.find({
             date: {
                 $gte: startOfDay,
-                $lte: endOfDay
-            }
+                $lte: endOfDay,
+            },
         });
 
         // Map employee data with attendance
-        const result = employees.map(employee => {
-            const record = attendanceRecords.find(r =>
-                r.employeeId.toString() === employee._id.toString()
+        const result = employees.map((employee) => {
+            const record = attendanceRecords.find(
+                (r) => r.employeeId.toString() === employee._id.toString()
             );
 
             return {
                 employeeId: employee.employeeId,
                 name: employee.name,
-                clockIn: record?.clockIn || 'Not clocked in',
-                clockOut: record?.clockOut || 'Not clocked out',
-                status: record?.status || 'Absent'
+                clockIn: record?.clockIn || "Not clocked in",
+                clockOut: record?.clockOut || "Not clocked out",
+                status: record?.status || "Absent",
             };
         });
 
         res.json(result);
-
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to fetch employee attendance' });
+        res.status(500).json({ error: "Failed to fetch employee attendance" });
     }
 };
 
@@ -343,15 +358,12 @@ export const getEmployeeAttendance = async (req, res) => {
 //     getPayroll
 // };
 
-
-
 {
-    "dailysalary"
-    "empid"
-    "empname"
-    "checkin "
-    "cout"
-    "monthlySalary"
-    "wageperhour"
-
+    ("dailysalary");
+    ("empid");
+    ("empname");
+    ("checkin ");
+    ("cout");
+    ("monthlySalary");
+    ("wageperhour");
 }
