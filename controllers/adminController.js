@@ -328,7 +328,7 @@ export const getEmployeeById = async (req, res) => {
             role: 'employee',
             employeeId: employeeId
         })
-            .select('name email cnic role status wagePerHour employeeId dailyWorkingHours phoneNumber weeklyWorkingDays');
+            .select('name email cnic role address status wagePerHour employeeId dailyWorkingHours phoneNumber weeklyWorkingDays');
 
         if (!employee) {
             return res.status(404).json({ error: 'Employee not found' });
