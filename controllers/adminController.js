@@ -13,14 +13,13 @@ export const addEmployee = async (req, res) => {
             password,
             cnic,
             role,
-            fullName,
             wagePerHour,
             weeklyWorkingDays,
             joiningDate,
             address,
             phoneNumber,
             dailyWorkingHours,
-            shift,
+            // shift,
             employeeId,
             status
         } = req.body;
