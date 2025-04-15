@@ -1,7 +1,7 @@
 // import {createUser} from "../controllers/users.js"
 import { Router } from "express";
 import { asyncErrorHandler } from "../Errors/AsyncErrorHandler.js";
-import { UpdatePassword, forgotPassword, resendOtpController, resetPassword, userSignInController, userSignUpController, verifyOTPresetPassword, verifyOtpController } from "../controllers/User.js";
+import { UpdatePassword, forgotPassword, getProfile, resendOtpController, resetPassword, updateProfile, userSignInController, userSignUpController, verifyOTPresetPassword, verifyOtpController } from "../controllers/User.js";
 import { authenticateUser } from "../middleware/auth.js";
 
 const router = Router();
@@ -37,5 +37,10 @@ router.post("/reset-password", asyncErrorHandler(resetPassword));
 // Resend otp
 router.post("/resend-otp", asyncErrorHandler(resendOtpController));
 
+// Get user profile
+router.get("/:userId", getProfile);
+
+// Update profile
+router.put("/update/:userId", updateProfile);
 
 export default router;

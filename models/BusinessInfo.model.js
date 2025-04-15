@@ -19,48 +19,48 @@ const BusinessInfoSchema = new Schema({
             message: props => `${props.value} is not a valid phone number!`
         }
     },
-    fiscalYearStart: {
-        type: Date,
-        required: [true, 'Fiscal year start date is required'],
-        validate: {
-            validator: function (v) {
-                return v instanceof Date && !isNaN(v);
-            },
-            message: props => `${props.value} is not a valid date!`
-        }
-    },
+    // fiscalYearStart: {
+    //     type: Date,
+    //     required: [true, 'Fiscal year start date is required'],
+    //     validate: {
+    //         validator: function (v) {
+    //             return v instanceof Date && !isNaN(v);
+    //         },
+    //         message: props => `${props.value} is not a valid date!`
+    //     }
+    // },
     businessAddress: {
         type: String,
         required: [true, 'Business address is required'],
         trim: true,
         maxlength: [200, 'Address cannot exceed 200 characters']
     },
-    currency: {
-        type: String,
-        required: [true, 'Currency is required'],
-        trim: true,
-        uppercase: true,
-        enum: {
-            values: ['PKR', 'USD', 'EUR', 'GBP', 'AED'],
-            message: '{VALUE} is not a supported currency'
-        }
-    },
-    timezone: {
-        type: String,
-        required: [true, 'Timezone is required'],
-        trim: true,
-        validate: {
-            validator: function (v) {
-                try {
-                    Intl.DateTimeFormat(undefined, { timeZone: v });
-                    return true;
-                } catch (ex) {
-                    return false;
-                }
-            },
-            message: props => `${props.value} is not a valid timezone`
-        }
-    },
+    // currency: {
+    //     type: String,
+    //     required: [true, 'Currency is required'],
+    //     trim: true,
+    //     uppercase: true,
+    //     enum: {
+    //         values: ['PKR', 'USD', 'EUR', 'GBP', 'AED'],
+    //         message: '{VALUE} is not a supported currency'
+    //     }
+    // },
+    // timezone: {
+    //     type: String,
+    //     required: [true, 'Timezone is required'],
+    //     trim: true,
+    //     validate: {
+    //         validator: function (v) {
+    //             try {
+    //                 Intl.DateTimeFormat(undefined, { timeZone: v });
+    //                 return true;
+    //             } catch (ex) {
+    //                 return false;
+    //             }
+    //         },
+    //         message: props => `${props.value} is not a valid timezone`
+    //     }
+    // },
     createdAt: {
         type: Date,
         default: Date.now,

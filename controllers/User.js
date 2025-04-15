@@ -1,3 +1,4 @@
+import User from "../models/User.js";
 import userModel from "../models/User.js";
 // import { uploadFileToAWS } from "../../utils/AWS.js";
 import validatePassword from "../utils/passwordValidators.js";
@@ -761,3 +762,147 @@ export function LogoutController(req, res) {
     });
   }
 }
+
+
+//Profile updation
+// export const getProfile = async (req, res) => {
+//   try {
+//     const user = await User.findById(req.user._id)
+//       .select('-password -verifyCode -verifyCodeExpiry -googleId');
+
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
+
+//     res.status(200).json({ success: true, user });
+//   } catch (error) {
+//     console.error("Error getting profile:", error);
+//     res.status(500).json({ success: false, message: "Internal server error" });
+//   }
+// };
+
+// Get employee by employeeId
+export const getProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Validate userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid user ID is required",
+        field: "userId"
+      });
+    }
+
+    // Find user and exclude sensitive fields
+    const user = await User.findById(userId)
+      .select('-password -verifyCode -verifyCodeExpiry -googleId -__v -refreshToken');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found with the provided ID"
+      });
+    }
+
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        profile: user
+      }
+    });
+
+  } catch (error) {
+    console.error("[User Profile Controller Error]", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching user profile",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+
+
+// Update profile information
+export const updateProfile = async (req, res) => {
+  try {
+    const {
+      name,
+      phoneNumber,
+      address,
+      cnic,
+      email,
+      role
+    } = req.body;
+
+    // Get employeeId from URL params instead of body for security
+    const { employeeId } = req.params;
+
+    // Basic validation
+    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+      return res.status(400).json({ success: false, message: "Invalid employee ID format" });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findById(employeeId);
+    if (!existingUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Prepare update data
+    const updateData = {
+      name,
+      phoneNumber,
+      address,
+      cnic,
+      email,
+      role
+    };
+
+    // Remove undefined/null fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] == null) {
+        delete updateData[key];
+      }
+    });
+
+    const updatedUser = await User.findByIdAndUpdate(
+      employeeId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password -verifyCode -verifyCodeExpiry -googleId');
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages
+      });
+    }
+
+    // Handle duplicate key errors (e.g., unique email/cnic)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Duplicate field value entered',
+        field: Object.keys(error.keyPattern)[0]
+      });
+    }
+
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

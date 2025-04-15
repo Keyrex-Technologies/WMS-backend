@@ -213,43 +213,160 @@ export const updateHourlyRate = async (req, res) => {
 // };
 
 //uodate employee data
+// export const updateEmployee = async (req, res) => {
+//     try {
+//         const { employeeId } = req.params;
+//         const updates = req.body;
+
+//         // Remove sensitive fields that shouldn't be updated
+//         delete updates.password;
+//         delete updates.email;
+//         delete updates.employeeId;
+
+//         // Validate if employee exists
+//         const employee = await User.findById(employeeId);
+//         if (!employee) {
+//             return res.status(404).json({ error: 'Employee not found' });
+//         }
+
+//         // Update employee
+//         const updatedEmployee = await User.findByIdAndUpdate(
+//             id,
+//             { $set: updates },
+//             { new: true, runValidators: true }
+//         ).select('-password');
+
+//         res.json({
+//             message: 'Employee updated successfully',
+//             employee: updatedEmployee
+//         });
+//     } catch (err) {
+//         if (err.name === 'ValidationError') {
+//             res.status(400).json({ error: err.message });
+//         } else {
+//             console.error(err);
+//             res.status(500).json({ error: 'Failed to update employee' });
+//         }
+//     }
+// };
+
 export const updateEmployee = async (req, res) => {
     try {
         const { employeeId } = req.params;
         const updates = req.body;
 
-        // Remove sensitive fields that shouldn't be updated
-        delete updates.password;
-        delete updates.email;
-        delete updates.employeeId;
+        // Validate employeeId
+        if (!employeeId?.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Employee ID is required",
+                field: "employeeId"
+            });
+        }
 
-        // Validate if employee exists
-        const employee = await User.findById(employeeId);
+        // Find the employee first to verify existence and authorization
+        const employee = await User.findOne({ employeeId: employeeId.trim() });
+
         if (!employee) {
-            return res.status(404).json({ error: 'Employee not found' });
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found with the provided ID"
+            });
         }
 
-        // Update employee
-        const updatedEmployee = await User.findByIdAndUpdate(
-            id,
+        // Authorization check - only admin or the employee themselves can update
+        if (req.user.role !== 'admin' && req.user.employeeId !== employee.employeeId) {
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized to update this employee's profile"
+            });
+        }
+
+        // Fields that should never be updated via this endpoint
+        const restrictedFields = [
+            'password',
+            'email',
+            'employeeId',
+            'verifyCode',
+            'verifyCodeExpiry',
+            'googleId',
+            'role' // Only admin should be able to update role
+        ];
+
+        // Remove restricted fields from updates
+        restrictedFields.forEach(field => delete updates[field]);
+
+        // Additional check if non-admin is trying to update protected fields
+        if (req.user.role !== 'admin') {
+            const protectedFields = ['role', 'status', 'wagePerHour'];
+            const attemptedProtectedUpdate = protectedFields.some(field => field in updates);
+
+            if (attemptedProtectedUpdate) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Not authorized to update restricted fields"
+                });
+            }
+        }
+
+        // Perform the update
+        const updatedEmployee = await User.findOneAndUpdate(
+            { employeeId: employeeId.trim() },
             { $set: updates },
-            { new: true, runValidators: true }
-        ).select('-password');
+            {
+                new: true,
+                runValidators: true,
+                context: 'query'
+            }
+        ).select('-password -verifyCode -verifyCodeExpiry -googleId -__v');
 
-        res.json({
-            message: 'Employee updated successfully',
-            employee: updatedEmployee
-        });
-    } catch (err) {
-        if (err.name === 'ValidationError') {
-            res.status(400).json({ error: err.message });
-        } else {
-            console.error(err);
-            res.status(500).json({ error: 'Failed to update employee' });
+        if (!updatedEmployee) {
+            return res.status(404).json({
+                success: false,
+                message: "Employee not found after update attempt"
+            });
         }
+
+        return res.status(200).json({
+            success: true,
+            message: "Employee updated successfully",
+            data: {
+                employee: updatedEmployee
+            }
+        });
+
+    } catch (error) {
+        console.error("[Employee Update Error]", error);
+
+        // Handle specific error types
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => ({
+                field: err.path,
+                message: err.message
+            }));
+
+            return res.status(400).json({
+                success: false,
+                message: "Validation failed",
+                errors
+            });
+        }
+
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: "Duplicate field value",
+                field: Object.keys(error.keyPattern)[0]
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: "An error occurred while updating employee",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 };
-
 //delete employee
 export const deleteEmployee = async (req, res) => {
     try {

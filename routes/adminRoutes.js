@@ -7,7 +7,7 @@ import { updateUserRole, updateHourlyRate, addEmployee, updateEmployee, deleteEm
 const router = express.Router();
 
 // emplyee update and delete routes
-router.put('/employees/:employeeId', updateEmployee);
+router.put('/update/:employeeId', updateEmployee);
 router.delete('/employees/:employeeId', deleteEmployee);
 router.get('/employees/:employeeId', getEmployeeById);
 // Get all employees
