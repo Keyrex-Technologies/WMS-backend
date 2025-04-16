@@ -75,6 +75,7 @@ io.on("connection", (socket) => {
         // Emit check-in success
         socket.emit("check-in-success", {
           message: "Checked in successfully",
+          result,
           time: new Date(),
         });
 
@@ -112,7 +113,6 @@ io.on("connection", (socket) => {
           message: "Checked out successfully",
           time: new Date(),
           result,
-          minutes_worked: result.minutes_worked,
         });
 
         io.emit("attendance-update", {

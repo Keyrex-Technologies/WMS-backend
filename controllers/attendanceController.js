@@ -513,8 +513,9 @@ export const socketCheckIn = async (data) => {
         // Don't process duplicate check-ins
         if (attendance && attendance.status === "in") {
             return {
-                success: false,
-                message: "Already checked in"
+                success: true,
+                message: "Already checked in",
+                attendance,
             };
         }
 
