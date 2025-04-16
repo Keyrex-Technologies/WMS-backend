@@ -350,12 +350,14 @@ export const getAllEmployeeAttendencePayroll = async (req, res) => {
         const endOfMonth = new Date(year, month, 0);
 
         const attendanceHistory = await AttendenceHistory.find({
-            employeeId: employeeId,
+            userId: employeeId,
             date: {
                 $gte: startOfMonth,
                 $lte: endOfMonth
             }
         }).sort({ date: -1 }); // sort by date, newest first
+
+        console.log(attendanceHistory)
         
         const payroll = await Promise.all(attendanceHistory.map(async (record) => {
             const employee = await User.findOne({ employeeId: record.employeeId });
@@ -598,6 +600,8 @@ export const socketCheckOut = async (data) => {
         // since it's the same day
         // we can just subtract timestamps directly
         const diffMs = currentTime - attendance.current_checkin_time;
+
+        console.log(diffMs)
         
         // Calculate minutes first
         const minutesWorked = Math.floor(diffMs / (1000 * 60));
@@ -608,7 +612,7 @@ export const socketCheckOut = async (data) => {
         // Update the record
         attendance.checkout_time = currentTime;
         attendance.status = "out";
-        attendance.working_hours = parseFloat(hoursWorked.toFixed(2));
+        attendance.working_hours += parseFloat(hoursWorked.toFixed(2));
 
         await attendance.save();
 
@@ -616,7 +620,7 @@ export const socketCheckOut = async (data) => {
             success: true,
             data: {
                 ...attendance._doc,
-                minutes_worked: minutesWorked
+                minutes_worked: minutesWorked,
             },
             message: "Check-out successful"
         };

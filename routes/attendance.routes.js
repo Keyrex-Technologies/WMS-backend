@@ -2,7 +2,7 @@
 
 import { Router } from "express";
 
-import { markAttendance, getPayroll, getTodayAttendance, getAttendanceStats, getEmployeeAttendance, getAllAttendance } from "../controllers/attendanceController.js";
+import { markAttendance, getPayroll, getTodayAttendance, getAttendanceStats, getEmployeeAttendance, getAllAttendance, getAllEmployeeAttendencePayroll, getAllEmployeesAttendencePayroll } from "../controllers/attendanceController.js";
 
 // import AttendanceController from '../controllers/attendance.controller.js';
 // import { getIO } from "../utils/socketService.js";
@@ -57,5 +57,10 @@ router.get('/stats', getAttendanceStats);
 router.get('/today', getEmployeeAttendance);
 
 router.get('/get-all-attendance', getAllAttendance);
+
+router.get('/get-all-payrolls', getAllEmployeesAttendencePayroll);
+
+router.get('/get-payroll', getAllEmployeeAttendencePayroll);
+
 
 export default router;
