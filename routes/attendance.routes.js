@@ -56,6 +56,8 @@ router.get('/stats', getAttendanceStats);
 
 router.get('/today', getEmployeeAttendance);
 
+// router.get('/get-attendance-daily', getAllEmployeesAttendance);
+
 router.get('/get-all-attendance', getAllAttendance);
 
 router.get('/get-all-payrolls', getAllEmployeesAttendencePayroll);

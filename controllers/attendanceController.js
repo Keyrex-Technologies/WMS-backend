@@ -437,7 +437,6 @@ export const getAttendanceStats = async (req, res) => {
 
 // get employee attendence
 export const getEmployeeAttendance = async (req, res) => {
-    console.log("getEmployeeAttendance")
     try {
         // Get today's date range
         const startOfDay = new Date();
@@ -462,14 +461,15 @@ export const getEmployeeAttendance = async (req, res) => {
         // Map employee data with attendance
         const result = employees.map((employee) => {
             const record = attendanceRecords.find(
-                (r) => r.employeeId.toString() === employee._id.toString()
+                (r) => r.userId.toString() === employee._id.toString()
             );
 
             return {
+                userId: employee._id,
                 employeeId: employee.employeeId,
                 name: employee.name,
-                clockIn: record?.clockIn || "Not clocked in",
-                clockOut: record?.clockOut || "Not clocked out",
+                clockIn: record?.checkin_time || "Not clocked in",
+                clockOut: record?.checkout_time || "Not clocked out",
                 status: record?.status || "Absent",
             };
         });
