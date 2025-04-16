@@ -13,10 +13,9 @@ app.use(cookieParser());
 app.use(cors());
 
 // =========================== ALL Imports of Routes  ======================================
-import { FirstRoute, UserRoute } from "./routes/index.routes.js";
+import UserRoute from "./routes/users.routes.js";
 import AttendanceRoutes from "./routes/attendance.routes.js";
-import AdminRoutes from "./routes/adminRoutes.js";
-import BusinessInfoRoutes from "./routes/businessInfoRoutes.js";
+import AdminRoutes from "./routes/admin.routes.js";
 import CustomError from "./Errors/customErrorHandler.js";
 import { authenticateToken } from "./middleware/auth.js";
 import connectDB from "./utils/db.js";
@@ -117,11 +116,9 @@ app.set('io', io);
 // =====================================================================================
 
 // Routes
-app.use("/first", FirstRoute);
 app.use("/user", UserRoute);
 app.use('/attendance', authenticateToken, AttendanceRoutes); // Authenticated attendance routes
 app.use('/admin', authenticateToken, AdminRoutes); // Admin routes for role change
-app.use('/Info', authenticateToken, BusinessInfoRoutes); // Admin routes for role change
 
 app.use("*", (req, res) => {
   throw new CustomError(`${req.url} not found`, 404);

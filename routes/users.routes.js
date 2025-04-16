@@ -1,18 +1,18 @@
 import { Router } from "express";
 import { asyncErrorHandler } from "../Errors/AsyncErrorHandler.js";
-import { UpdatePassword, forgotPassword, getProfile, resendOtpController, resetPassword, updateProfile, userSignInController, userSignUpController, verifyOTPresetPassword, verifyOtpController } from "../controllers/users.controller.js";
-import { authenticateUser } from "../middleware/auth.js";
+import {
+  userSignUpController,
+  verifyOtpController,
+  userSignInController,
+  forgotPassword,
+  verifyOTPresetPassword,
+  resetPassword,
+  resendOtpController,
+  getProfile,
+  updateProfile,
+} from "../controllers/users.controller.js";
 
 const router = Router();
-// router.post(
-//   "/",
-//   asyncErrorHandler(async (req, res) => {
-//     // createUser(req,res)
-//     res.status(201).json({ message: "User created successfully" });
-//   })
-// );
-
-
 
 // Sign up
 router.post("/signup", asyncErrorHandler(userSignUpController));
@@ -25,7 +25,6 @@ router.post("/signin", asyncErrorHandler(userSignInController));
 
 // Forgot password
 router.post("/forgot-password", asyncErrorHandler(forgotPassword));
-router.post("/update-password", authenticateUser, asyncErrorHandler(UpdatePassword));
 
 // Verify OTP for password reset
 router.post("/verify-otp-reset", asyncErrorHandler(verifyOTPresetPassword));
@@ -33,13 +32,14 @@ router.post("/verify-otp-reset", asyncErrorHandler(verifyOTPresetPassword));
 // Reset password
 router.post("/reset-password", asyncErrorHandler(resetPassword));
 
-// Resend otp
+// Resend OTP
 router.post("/resend-otp", asyncErrorHandler(resendOtpController));
 
 // Get user profile
-router.get("/:userId", getProfile);
+router.get("/get-profile/:userId", getProfile);
 
-// Update profile
-router.put("/update/:userId", updateProfile);
+// Update user profile
+router.put("/update-profile/:userId", updateProfile);
+
 
 export default router;
