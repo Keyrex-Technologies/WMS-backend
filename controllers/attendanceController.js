@@ -358,7 +358,18 @@ export const getEmployeeAttendance = async (req, res) => {
 // Socket-enabled controller methods
 export const socketCheckIn = async (data) => {
     try {
-        const { employeeId, employeeName, email, date } =data;
+        const { employeeId, date } =data;
+
+        const employee = await User.findOne({ employeeId });
+        if (!employee) {
+            return {
+                success: false,
+                message: "Employee not found",
+            };
+        }
+        const employeeName = employee.name;
+        const email = employee.email;
+        
         const today = new Date(date || new Date());
         today.setHours(0, 0, 0, 0);
 
