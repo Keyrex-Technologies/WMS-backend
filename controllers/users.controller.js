@@ -3,9 +3,9 @@ import validatePassword from "../utils/passwordValidators.js";
 import { sendEmail, sendPasswordResetEmail } from "../utils/sendEmail.js";
 import mongoose from "mongoose";
 
+// signup
 export async function userSignUpController(req, res) {
   try {
-    console.log(req.body);
     const { email, password, phoneNumber, name, cnic, employeeId } = req.body;
     if (!email) {
       return res.status(400).json({
@@ -51,11 +51,10 @@ export async function userSignUpController(req, res) {
         success: false,
       });
     }
-    const existingUserVerifiedByEmail = await userModel.findOne({
+    const existingUserVerifiedByEmail = await User.findOne({
       email,
       // isVerified: true,
     });
-
 
     if (existingUserVerifiedByEmail) {
       return res.status(400).json({
@@ -63,7 +62,7 @@ export async function userSignUpController(req, res) {
         success: false,
       });
     }
-    const existingUserByEmail = await userModel.findOne({ email });
+    const existingUserByEmail = await User.findOne({ email });
     // Generate a 4-digit OTP
     const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
     if (existingUserByEmail) {
@@ -84,7 +83,7 @@ export async function userSignUpController(req, res) {
     } else {
       const expiryDate = new Date();
       expiryDate.setHours(expiryDate.getHours() + 1);
-      const newUser = new userModel({
+      const newUser = new User({
         name,
         email,
         cnic,
@@ -94,7 +93,6 @@ export async function userSignUpController(req, res) {
         verifyCode: generatedOtp,
         verifyCodeExpiry: expiryDate,
         isVerified: false,
-
       });
       await newUser.save();
     }
@@ -107,13 +105,15 @@ export async function userSignUpController(req, res) {
       // otp: generatedOtp, // Optionally send the OTP back to the client
     });
   } catch (err) {
-    console.log("err", err)
+    console.log("err", err);
     res.json({
       message: err.message || err,
       success: false,
     });
   }
 }
+
+// verify
 export async function verifyOtpController(req, res) {
   try {
     const { email, otp } = req.body;
@@ -124,8 +124,7 @@ export async function verifyOtpController(req, res) {
       });
     }
 
-    const user = await userModel.findOne({ email });
-    console.log(user);
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({
@@ -136,7 +135,7 @@ export async function verifyOtpController(req, res) {
     const isCodeValid = user.verifyCode === otp;
     const isCodeNotExpired = new Date(user.verifyCodeExpiry) > new Date();
     if (isCodeValid && isCodeNotExpired) {
-      await userModel.updateOne({ _id: user._id }, { isVerified: true });
+      await User.updateOne({ _id: user._id }, { isVerified: true });
       return res.status(200).json({
         success: true,
 
@@ -161,13 +160,15 @@ export async function verifyOtpController(req, res) {
     });
   }
 }
+
+// login
 export async function userSignInController(req, res) {
   const frontendHost = req.headers.origin;
-  console.log(frontendHost);
+
   try {
     const { email, password } = req.body;
 
-    console.log(req.body)
+    console.log(req.body);
     if (!email) {
       return res.status(400).json({
         message: "Please provide email",
@@ -181,9 +182,9 @@ export async function userSignInController(req, res) {
       });
     }
 
-    const user = await userModel.findOne({ email });
+    const user = await User.findOne({ email });
 
-    console.log("user", user)
+    console.log("user", user);
     if (!user) {
       return res.status(404).json({
         message: "Invalid Credentials!",
@@ -219,7 +220,7 @@ export async function userSignInController(req, res) {
         email: user.email,
         name: user.name,
         isVerified: user.isVerified,
-        role: user.role
+        role: user.role,
       };
       const options = {
         httpOnly: true,
@@ -238,135 +239,15 @@ export async function userSignInController(req, res) {
       });
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.json({
       message: err.message || "Internal server Error in login",
       success: false,
     });
   }
 }
-export async function signinWithGoogleController(req, res) {
-  const frontendHost = req.headers.origin;
-  try {
-    const { googleId, name, email } = req.body;
-    if (!googleId || !name || !email) {
-      return res
-        .status(400)
-        .send({ message: "Invalid Credentials", success: false });
-    }
 
-    let user = await userModel.findOne({ email, isVerified: true });
-    if (!user && frontendHost === "https://www.xyz.com") {
-      user = new userModel({ isVerified: true, ...req.body });
-      await user.save();
-    }
-    if (!user && frontendHost === "https://admin.xyz.com") {
-      return res.status(401).json({
-        message: "Access Denied, You are not allowed to login.",
-        success: true,
-      });
-    }
-    if (frontendHost === "https://www.xyz.com" && user.isAdmin) {
-      return res.status(401).json({
-        message: "Access Denied, You are not allowed to login.",
-        success: true,
-      });
-    }
-
-    if (frontendHost === "https://admin.xyz.com" && !user.isAdmin) {
-      return res.status(401).json({
-        message: "Access Denied, You are not allowed to login.",
-        success: true,
-      });
-    }
-    const token = await user.generateAccessToken();
-
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
-    res.status(200).cookie("token", token, options).json({
-      message: "Login successfully",
-      token: token,
-      success: true,
-    });
-  } catch (err) {
-    res.status(500).json({
-      message: err.message || "Internal server Error in login",
-      success: false,
-    });
-  }
-}
-export async function updateUserController(req, res) {
-  const updateData = req.body;
-  const userId = new mongoose.Types.ObjectId(req.user._id);
-  try {
-    const updatedUser = await userModel.findByIdAndUpdate(userId, updateData, {
-      new: true,
-      runValidators: true,
-    });
-    if (!updatedUser) {
-      return res.status(404).json({
-        message: "User not found",
-        success: false,
-      });
-    }
-    // Remove sensitive fields before sending the response
-    const { password, expiryDate, verifytoken, ...userData } = updatedUser.toObject();
-    const token = await updatedUser.generateAccessToken();
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
-    res.status(200).cookie("token", token, options).json({
-      message: "Updated successfully",
-      user: userData,
-      token: token,
-      success: true,
-    });
-  } catch (error) {
-    res.json({
-      message: err.message || "Error while updating user",
-      success: false,
-    });
-  }
-}
-// export async function forgotPassword(req, res) {
-//   const { email } = req.body;
-//   try {
-//     const user = await userModel.findOne({ email });
-//     if (!user) {
-//       return res.status(404).json({
-//         message: "User not found!",
-//         success: false,
-//       });
-//     }
-//     // Generate a 4-digit OTP
-//     const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
-//     const expiryDate = new Date();
-//     expiryDate.setMinutes(expiryDate.getMinutes() + 15);
-//     //add that otp in the db
-//     user.verifyCode = generatedOtp;
-//     user.verifyCodeExpiry = expiryDate;
-//     await user.save();
-
-//     //send verification email
-//     await sendEmail(email, generatedOtp, user.name);
-//     // const saveUser = await userData.save();
-//     res.status(201).json({
-//       success: true,
-//       message: "OTP: One Time password sent to this email, please verify",
-
-//       // otp: generatedOtp, // Optionally send the OTP back to the client
-//     });
-//   } catch (error) {
-//     res.json({
-//       message: error.message || "Error in forgot password",
-//       success: false,
-//     });
-//   }
-// }
-
+// forgot-pass
 export async function forgotPassword(req, res) {
   const { email } = req.body;
 
@@ -378,7 +259,7 @@ export async function forgotPassword(req, res) {
   }
 
   try {
-    const user = await userModel.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
       // Return generic message for security
       return res.status(200).json({
@@ -396,7 +277,6 @@ export async function forgotPassword(req, res) {
 
     // console.log(email)
 
-
     // Send email
     await sendPasswordResetEmail(email, generatedOtp, user.name);
 
@@ -404,7 +284,6 @@ export async function forgotPassword(req, res) {
       success: true,
       message: "OTP sent to your email",
     });
-
   } catch (error) {
     console.error("Forgot password error:", error);
     return res.status(500).json({
@@ -414,9 +293,7 @@ export async function forgotPassword(req, res) {
   }
 }
 
-
 //resend otp
-
 export async function resendOtpController(req, res) {
   try {
     const { email } = req.body;
@@ -429,7 +306,7 @@ export async function resendOtpController(req, res) {
     }
 
     // Find the user by email
-    const user = await userModel.findOne({ email });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({
@@ -462,7 +339,6 @@ export async function resendOtpController(req, res) {
       success: true,
       message: "New OTP has been sent to your email",
     });
-
   } catch (err) {
     console.log("Error in resendOtpController:", err);
     res.status(500).json({
@@ -471,6 +347,8 @@ export async function resendOtpController(req, res) {
     });
   }
 }
+
+//verify reset otp
 export async function verifyOTPresetPassword(req, res) {
   try {
     const { email, otp } = req.body;
@@ -480,7 +358,7 @@ export async function verifyOTPresetPassword(req, res) {
         success: false,
       });
     }
-    const user = await userModel.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -515,6 +393,8 @@ export async function verifyOTPresetPassword(req, res) {
     });
   }
 }
+
+//reset password
 export async function resetPassword(req, res) {
   const { email, password } = req.body;
   try {
@@ -541,7 +421,7 @@ export async function resetPassword(req, res) {
       });
     }
 
-    const user = await userModel.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -567,180 +447,150 @@ export async function resetPassword(req, res) {
     });
   }
 }
-export async function UpdatePassword(req, res) {
-  // Assumes req.user is available from auth middleware
-  console.log('Request user:', req.user);
-  console.log('Request headers:', req.headers);
 
-  // 2. Verify user exists in request
-  if (!req.user || !req.user._id) {
-    return res.status(401).json({
-      message: "Not authorized - User authentication failed",
-      success: false,
-    });
-  }
-
-  // 3. Get user ID (no need to convert to ObjectId)
-  const userId = req.user._id;
-
-  const { currentPassword, newPassword } = req.body;
-
-  try {
-    // Ensure new password is provided
-    if (!newPassword) {
-      return res.status(400).json({
-        message: "Please provide new password",
-        success: false,
-      });
-    }
-
-    // Validate the new password against the regex pattern
-    if (!validatePassword(newPassword)) {
-      return res.status(400).json({
-        message:
-          "Password must contain at least one uppercase letter, one lowercase letter, one number, one special character, and be 8-15 characters long.",
-        success: false,
-      });
-    }
-
-    // Find the user by ID
-    const user = await userModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-        success: false,
-      });
-    }
-
-    // Check if the user already has a password
-    if (user.password) {
-      // If current password is not provided, return an error
-      if (!currentPassword) {
-        return res.status(400).json({
-          message: "Please provide current password",
-          success: false,
-        });
-      }
-
-      // Verify if the provided current password matches the user's actual current password
-      const isCurrentPasswordValid = await user.matchPassword(currentPassword);
-      if (!isCurrentPasswordValid) {
-        return res.status(400).json({
-          message: "Current password is incorrect.",
-          success: false,
-        });
-      }
-
-      // Check if the new password is different from the current password
-      if (currentPassword === newPassword) {
-        return res.status(400).json({
-          message: "New password cannot be the same as the current password.",
-          success: false,
-        });
-      }
-    }
-
-    // If the user doesn't have a password, just set the new one without checking currentPassword
-    user.password = newPassword;
-    await user.save();
-
-    res.status(200).json({
-      message: "Password updated successfully",
-      success: true,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: error.message || "Error updating password",
-      success: false,
-    });
-  }
-}
-
-// export async function UpdateProfilePicture(req, res) {
-//   const userId = new mongoose.Types.ObjectId(req.user._id);
-
-//   try {
-//     const { profile } = req.body;
-//     if (!profile) {
-//       return res
-//         .status(400)
-//         .json({ message: "No file uploaded", success: false });
-//     }
-
-//     const user = await userModel.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({
-//         message: "User not found",
-//         success: false,
-//       });
-//     }
-
-//     const AwsResponse = await uploadFileToAWS(profile);
-//     if (!AwsResponse.success) {
-//       return res
-//         .status(400)
-//         .json({ message: "profle updation failed, something went wrong" });
-//     }
-//     // Update the user's profile picture URL
-//     const updatedUser = await userModel.findByIdAndUpdate(
-//       userId,
-//       { profile: AwsResponse.file_url }, // Only update the profile field
-//       { new: true, runValidators: false } // Return the updated document, disable validators
-//     );
-
-//     const token = await updatedUser.generateAccessToken();
-//     const options = {
-//       httpOnly: true,
-//       secure: true,
-//     };
-//     res.status(200).cookie("token", token, options).json({
-//       message: "profile picture updated successfully",
-//       token: token,
-//       success: true,
-//     });
-//   } catch (error) {
-//     res.json({
-//       message: error.message || "Error in updating profile picture",
-//       success: false,
-//     });
-//   }
-// }
-export async function getLoggedInUser(req, res) {
+// update-employee
+export async function updateUserController(req, res) {
+  const updateData = req.body;
   const userId = new mongoose.Types.ObjectId(req.user._id);
   try {
-    const user = await userModel.findById(userId);
-
-    if (!user) {
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updatedUser) {
       return res.status(404).json({
         message: "User not found",
         success: false,
       });
     }
-
-    // Check if the user has a password and/or Google ID
-    const hasPassword = user.password ? true : false;
-    const hasGoogleId = user.googleId ? true : false;
-
-    res.status(200).json({
-      message: "Fetch user successfully",
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        isVerified: user.isVerified,
-        hasPassword, // Include whether the user has a password
-        hasGoogleId, // Include whether the user has a Google ID
-      },
+    // Remove sensitive fields before sending the response
+    const { password, expiryDate, verifytoken, ...userData } =
+      updatedUser.toObject();
+    const token = await updatedUser.generateAccessToken();
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+    res.status(200).cookie("token", token, options).json({
+      message: "Updated successfully",
+      user: userData,
+      token: token,
       success: true,
     });
   } catch (error) {
-    res.status(500).json({
-      message: "Error while Getting Logged In User information",
+    res.json({
+      message: err.message || "Error while updating user",
       success: false,
     });
   }
 }
 
+// get profile
+export const getProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid user ID is required",
+        field: "userId",
+      });
+    }
+
+    const user = await User.findById(userId).select(
+      "-password -verifyCode -verifyCodeExpiry -refreshToken"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found with the provided ID",
+      });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("[User Profile Controller Error]", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching user profile",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
+// update profile
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, phoneNumber, address, cnic, email, role } = req.body;
+    const { userId } = req.params;
+
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID format",
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Prepare update data and remove undefined/null fields
+    const updateData = { name, phoneNumber, address, cnic, email, role };
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] == null) {
+        delete updateData[key];
+      }
+    });
+
+    // Perform the update
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-password -verifyCode -verifyCodeExpiry -googleId");
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((val) => val.message);
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: messages,
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Duplicate field value entered",
+        field: Object.keys(error.keyPattern)[0],
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// logout
 export function LogoutController(req, res) {
   try {
     res
@@ -760,147 +610,3 @@ export function LogoutController(req, res) {
     });
   }
 }
-
-
-//Profile updation
-// export const getProfile = async (req, res) => {
-//   try {
-//     const user = await User.findById(req.user._id)
-//       .select('-password -verifyCode -verifyCodeExpiry -googleId');
-
-//     if (!user) {
-//       return res.status(404).json({ success: false, message: "User not found" });
-//     }
-
-//     res.status(200).json({ success: true, user });
-//   } catch (error) {
-//     console.error("Error getting profile:", error);
-//     res.status(500).json({ success: false, message: "Internal server error" });
-//   }
-// };
-
-// Get employee by employeeId
-export const getProfile = async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    // Validate userId
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid user ID is required",
-        field: "userId"
-      });
-    }
-
-    // Find user and exclude sensitive fields
-    const user = await User.findById(userId)
-      .select('-password -verifyCode -verifyCodeExpiry -googleId -__v -refreshToken');
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found with the provided ID"
-      });
-    }
-
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        profile: user
-      }
-    });
-
-  } catch (error) {
-    console.error("[User Profile Controller Error]", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "An error occurred while fetching user profile",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
-
-
-
-// Update profile information
-export const updateProfile = async (req, res) => {
-  try {
-    const {
-      name,
-      phoneNumber,
-      address,
-      cnic,
-      email,
-      role
-    } = req.body;
-
-    // Get employeeId from URL params instead of body for security
-    const { employeeId } = req.params;
-
-    // Basic validation
-    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
-      return res.status(400).json({ success: false, message: "Invalid employee ID format" });
-    }
-
-    // Check if user exists
-    const existingUser = await User.findById(employeeId);
-    if (!existingUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    // Prepare update data
-    const updateData = {
-      name,
-      phoneNumber,
-      address,
-      cnic,
-      email,
-      role
-    };
-
-    // Remove undefined/null fields
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] == null) {
-        delete updateData[key];
-      }
-    });
-
-    const updatedUser = await User.findByIdAndUpdate(
-      employeeId,
-      updateData,
-      { new: true, runValidators: true }
-    ).select('-password -verifyCode -verifyCodeExpiry -googleId');
-
-    res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
-      user: updatedUser
-    });
-  } catch (error) {
-    console.error("Error updating profile:", error);
-
-    // Handle mongoose validation errors
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation error',
-        errors: messages
-      });
-    }
-
-    // Handle duplicate key errors (e.g., unique email/cnic)
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Duplicate field value entered',
-        field: Object.keys(error.keyPattern)[0]
-      });
-    }
-
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
-};
