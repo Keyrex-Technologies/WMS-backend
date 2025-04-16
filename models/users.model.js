@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import Employee from "./Employee.model.js";
 
 const userSchema = new mongoose.Schema(
-
   {
-    // Authentication and Basic Info
+    employeeId: {
+      type: String,
+      unique: true,
+    },
     name: {
       type: String,
       required: [true, "Name is required"],
@@ -26,55 +27,51 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'manager', 'employee'],
-      default: 'employee'
+      enum: ["admin", "manager", "employee"],
+      default: "employee",
     },
-
-    // Employee Information
-
     cnic: {
       type: String,
-      required: function () { return this.role !== 'admin'; },
+      required: function () {
+        return this.role !== "admin";
+      },
       unique: true,
     },
     wagePerHour: {
       type: Number,
-      min: 0
+      min: 0,
     },
     weeklyWorkingDays: {
       type: Number,
       min: 1,
-      max: 7
+      max: 7,
     },
     joiningDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     address: {
-      type: String
+      type: String,
     },
     phoneNumber: {
       type: String,
-      required: function () { return this.role !== 'admin'; },
+      required: function () {
+        return this.role !== "admin";
+      },
     },
     dailyWorkingHours: {
       type: Number,
       min: 1,
-      max: 24
+      max: 24,
     },
-
-    isActive: {
+    isApproved: {
       type: Boolean,
-      default: true
+      default: true,
     },
     status: {
       type: String,
-      enum: ['active', 'inactive'],
-      default: 'inactive'
-    },
-    employeeId: {
-      type: String,
-      unique: true
+      enum: ["active", "inactive"],
+      default: "inactive",
     },
     verifyCode: {
       type: String,
@@ -86,18 +83,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
-    // Social Login
-    googleId: {
-      type: String,
-      default: "",
-    },
-
-    // Profile
-    profile: {
-      type: String,
-      default: "",
-    },
   },
   {
     timestamps: true,
@@ -106,29 +91,29 @@ const userSchema = new mongoose.Schema(
       transform: function (doc, ret) {
         delete ret.password;
         return ret;
-      }
-    }
-  },
-  { timestamps: true }
+      },
+    },
+},
 );
-// Encrypt password before saving
+
+userSchema.pre("save", function (next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
-  }
+  if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Method to compare password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Method to generate AccessToken
 userSchema.methods.generateAccessToken = async function () {
-  const token = await jwt.sign(
+  return jwt.sign(
     {
       _id: this._id,
       isVerified: this.isVerified,
@@ -139,10 +124,10 @@ userSchema.methods.generateAccessToken = async function () {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: 60 * 60 * 24,
+      expiresIn: "1d",
     }
   );
-  return token;
 };
+
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 export default User;

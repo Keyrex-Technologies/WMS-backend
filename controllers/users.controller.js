@@ -1,6 +1,4 @@
-import User from "../models/User.js";
-import userModel from "../models/User.js";
-// import { uploadFileToAWS } from "../../utils/AWS.js";
+import User from "../models/users.model.js";
 import validatePassword from "../utils/passwordValidators.js";
 import { sendEmail, sendPasswordResetEmail } from "../utils/sendEmail.js";
 import mongoose from "mongoose";

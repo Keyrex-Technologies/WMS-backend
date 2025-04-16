@@ -1,6 +1,6 @@
 // controllers/adminController.js
 // import Employee from '../models/Employee.model.js';
-import User from '../models/User.js';
+import User from '../models/users.model.js';
 import { sendAdminAddedEmployeeEmail } from '../utils/sendEmail.js';
 
 

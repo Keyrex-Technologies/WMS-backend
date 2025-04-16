@@ -1,7 +1,6 @@
-// import {createUser} from "../controllers/users.js"
 import { Router } from "express";
 import { asyncErrorHandler } from "../Errors/AsyncErrorHandler.js";
-import { UpdatePassword, forgotPassword, getProfile, resendOtpController, resetPassword, updateProfile, userSignInController, userSignUpController, verifyOTPresetPassword, verifyOtpController } from "../controllers/User.js";
+import { UpdatePassword, forgotPassword, getProfile, resendOtpController, resetPassword, updateProfile, userSignInController, userSignUpController, verifyOTPresetPassword, verifyOtpController } from "../controllers/users.controller.js";
 import { authenticateUser } from "../middleware/auth.js";
 
 const router = Router();

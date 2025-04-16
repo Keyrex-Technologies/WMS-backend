@@ -1,7 +1,7 @@
 // controllers/attendanceController.js
 
 import AttendanceModel from "../models/Attendance.model.js";
-import User from "../models/User.js";
+import User from "../models/users.model.js";
 import { calculatePayroll } from "../utils/payroll.js";
 
 // Mark attendance

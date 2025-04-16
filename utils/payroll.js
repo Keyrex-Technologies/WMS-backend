@@ -1,4 +1,4 @@
-import Employee from "../models/Employee.model.js";
+import Employee from "../models/users.model.js";
 
 
 function getHoursDifference(inTime, outTime) {

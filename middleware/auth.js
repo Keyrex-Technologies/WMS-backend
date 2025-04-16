@@ -1,6 +1,6 @@
 // middleware/auth.js
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import User from '../models/users.model.js';
 
 // Middleware to check if user is authenticated
 export const authenticateToken = (req, res, next) => {
