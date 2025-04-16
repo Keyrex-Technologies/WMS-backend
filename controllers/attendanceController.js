@@ -1,6 +1,7 @@
 // controllers/attendanceController.js
 
 import AttendanceModel from "../models/Attendance.model.js";
+import AttendenceHistory from "../models/AttendenceHistory.model.js";
 import User from "../models/users.model.js";
 import { calculatePayroll } from "../utils/payroll.js";
 
@@ -249,17 +250,142 @@ function formatDate(date) {
 
 export const getAllAttendance = async (req, res) => {
     try {
-        const todayAttendance = await AttendanceModel.find();
-        if (!todayAttendance && todayAttendance.length < 1) {
-            return res.json({ attendance: [] });
-        } else {
-            return res.json({ attendance: todayAttendance });
-        }
+        const attendanceHistory = await AttendenceHistory
+            .find({})
+            .sort({ date: -1 }); // sort by date, newest first
+        
+        return res.json({ 
+            success: true,
+            attendance: attendanceHistory || []
+        });
+        
     } catch (err) {
-        console.log(err);
-        res.status(500).json({ error: err.message });
+        console.error("Error in getAllAttendance:", err);
+        res.status(500).json({ 
+            success: false,
+            error: "Failed to fetch attendance history",
+            message: err.message 
+        });
     }
 };
+
+export const getAllEmployeesAttendencePayroll = async (req, res) => {
+    try {
+        const month = req.query.month || new Date().getMonth() + 1; // Default to current month
+        const year = new Date().getFullYear();
+
+        if (month < 1 || month > 12) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid month - must be between 1 and 12"
+            });
+        }
+
+        const startOfMonth = new Date(year, month - 1, 1);
+        const endOfMonth = new Date(year, month, 0); // Last day of the month
+
+        const attendanceHistory = await AttendenceHistory
+            .find({
+                date: {
+                    $gte: startOfMonth,
+                    $lte: endOfMonth
+                }
+            })
+            .sort({ date: -1 }); // sort by date, newest first
+        
+        const payroll = await Promise.all(attendanceHistory.map(async (record) => {
+            const employee = await User.findOne({ employeeId: record.employeeId });
+            return {
+                ...record._doc,
+                employeeName: employee?.name,
+                employeeId: record.employeeId,
+                role: employee?.role || 'employee',
+                date: formatDate(record.date),
+                status: record.status,
+                working_hours: record.working_hours,
+                daily_salary: employee?.wagePerHour * record.working_hours || 0,  
+            };
+        }));
+
+        return res.json({ 
+            success: true,
+            month: month,
+            attendance: payroll || []
+        });
+        
+    } catch (err) {
+        console.error("Error in getting attendence history with payroll:", err);
+        res.status(500).json({ 
+            success: false,
+            error: "Failed to fetch attendence history with payroll",
+            message: err.message 
+        });
+    }
+}
+
+export const getAllEmployeeAttendencePayroll = async (req, res) => {
+    try {
+        const { employeeId } = req.query;
+        const month = req.query.month || new Date().getMonth() + 1; // Default to current month
+        const year = new Date().getFullYear();
+
+        if (
+            !employeeId ||
+            typeof employeeId !== "string" ||
+            employeeId.trim() === ""
+        ) {
+            return res.status(400).json({
+                error: "Invalid employee ID - must be a non-empty string",
+            });
+        }
+
+        if (month < 1 || month > 12) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid month - must be between 1 and 12"
+            });
+        }
+
+        const startOfMonth = new Date(year, month - 1, 1);
+        const endOfMonth = new Date(year, month, 0);
+
+        const attendanceHistory = await AttendenceHistory.find({
+            employeeId: employeeId,
+            date: {
+                $gte: startOfMonth,
+                $lte: endOfMonth
+            }
+        }).sort({ date: -1 }); // sort by date, newest first
+        
+        const payroll = await Promise.all(attendanceHistory.map(async (record) => {
+            const employee = await User.findOne({ employeeId: record.employeeId });
+            return {
+                ...record._doc,
+                employeeName: employee?.name,
+                employeeId: record.employeeId,
+                role: employee?.role || 'employee',
+                date: formatDate(record.date),
+                status: record.status,
+                working_hours: record.working_hours,
+                daily_salary: employee?.wagePerHour * record.working_hours || 0,  
+            };
+        }));
+
+        return res.json({ 
+            success: true,
+            month: month,
+            attendance: payroll || []
+        });
+        
+    } catch (err) {
+        console.error("Error in getting attendence history with payroll:", err);
+        res.status(500).json({ 
+            success: false,
+            error: "Failed to fetch attendence history with payroll",
+            message: err.message 
+        });
+    }
+}
 
 //get stats
 export const getAttendanceStats = async (req, res) => {
@@ -358,9 +484,9 @@ export const getEmployeeAttendance = async (req, res) => {
 // Socket-enabled controller methods
 export const socketCheckIn = async (data) => {
     try {
-        const { employeeId, date } =data;
+        const { userId, date } =data;
 
-        const employee = await User.findOne({ employeeId });
+        const employee = await User.findById(userId);
         if (!employee) {
             return {
                 success: false,
@@ -369,13 +495,13 @@ export const socketCheckIn = async (data) => {
         }
         const employeeName = employee.name;
         const email = employee.email;
-        
+
         const today = new Date(date || new Date());
         today.setHours(0, 0, 0, 0);
 
         // Find if the employee already has an attendance record for today
         let attendance = await AttendanceModel.findOne({
-            employeeId,
+            userId,
             date: {
                 $gte: today,
                 $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
@@ -400,7 +526,8 @@ export const socketCheckIn = async (data) => {
         } else {
             // Create new record
             attendance = await AttendanceModel.create({
-                employeeId,
+                userId,
+                employeeId: employee.employeeId,
                 employeeName,
                 email,
                 date: today,
@@ -428,7 +555,7 @@ export const socketCheckIn = async (data) => {
 // Handle socket check-out
 export const socketCheckOut = async (data) => {
     try {
-        const { employeeId, date } = data;
+        const { userId, date } = data;
 
         // Format date to remove time portion to find today's record
         const today = new Date(date || new Date());
@@ -436,7 +563,7 @@ export const socketCheckOut = async (data) => {
 
         // Find the employee's attendance record for today
         const attendance = await AttendanceModel.findOne({
-            employeeId,
+            userId,
             date: {
                 $gte: today,
                 $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
