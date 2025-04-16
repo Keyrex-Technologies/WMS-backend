@@ -20,6 +20,7 @@ import CustomError from "./Errors/customErrorHandler.js";
 import { authenticateToken } from "./middleware/auth.js";
 import connectDB from "./utils/db.js";
 import { initAttendanceArchiving } from "./services/cronService.js";
+import { socketCheckIn, socketCheckOut } from "./controllers/attendanceController.js";
 // import { EmployeeRoutes } from "./routes/"
 
 // Connect to MongoDB before starting the server
@@ -62,7 +63,7 @@ io.on('connection', (socket) => {
 
       // Here you would verify the token and get user data
       // This is a simplified example - implement proper authentication
-      const user = { id: data.employeeId, email: data.email, date: data.date }; // Replace with actual auth
+      const user = { id: data.employeeId, date: data.date }; // Replace with actual auth
 
       const result = await socketCheckIn(data);
 
