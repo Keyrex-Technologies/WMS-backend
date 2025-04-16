@@ -19,11 +19,13 @@ import AdminRoutes from "./routes/admin.routes.js";
 import CustomError from "./Errors/customErrorHandler.js";
 import { authenticateToken } from "./middleware/auth.js";
 import connectDB from "./utils/db.js";
+import { initAttendanceArchiving } from "./services/cronService.js";
 // import { EmployeeRoutes } from "./routes/"
 
 // Connect to MongoDB before starting the server
 connectDB().then(() => {
   console.log('Database connection established');
+  initAttendanceArchiving(); // Initialize attendance archiving
 }).catch(err => {
   console.error('Database connection failed', err);
 });
@@ -60,20 +62,26 @@ io.on('connection', (socket) => {
 
       // Here you would verify the token and get user data
       // This is a simplified example - implement proper authentication
-      const user = { id: data.employeeId, email: data.email }; // Replace with actual auth
+      const user = { id: data.employeeId, email: data.email, date: data.date }; // Replace with actual auth
 
-      // Emit check-in success
-      socket.emit('check-in-success', {
-        message: 'Checked in successfully',
-        time: new Date()
-      });
+      const result = await socketCheckIn(data);
 
-      // Notify admin dashboard
-      io.emit('attendance-update', {
-        type: 'check-in',
-        user,
-        time: new Date()
-      });
+      if (result.success) {
+        // Emit check-in success
+        socket.emit('check-in-success', {
+          message: 'Checked in successfully',
+          time: new Date()
+        });
+
+        // Notify admin dashboard
+        io.emit('attendance-update', {
+          type: 'check-in',
+          user,
+          time: new Date()
+        });
+      } else {
+        socket.emit('check-in-error', { error: result.message });
+      }
 
     } catch (error) {
       socket.emit('check-in-error', { error: error.message });
@@ -84,22 +92,33 @@ io.on('connection', (socket) => {
   socket.on('check-out', async (data) => {
     try {
       // Similar authentication check as above
-      const user = { id: data.employeeId, email: data.email };
+      const token = socket.handshake.auth.token;
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
-      socket.emit('check-out-success', {
-        message: 'Checked out successfully',
-        time: new Date()
-      });
+      const user = { id: data.employeeId, date: data.date };
 
-      io.emit('attendance-update', {
-        type: 'check-out',
-        user,
-        time: new Date()
-      });
+      const result = await socketCheckOut(data);
 
+      if (result.success) {
+        socket.emit('check-out-success', {
+          message: 'Checked out successfully',
+          time: new Date()
+        });
+
+        io.emit('attendance-update', {
+          type: 'check-out',
+          user,
+          time: new Date()
+        });
+      } else {
+        socket.emit('check-out-error', { error: result.message });
+      }
     } catch (error) {
       socket.emit('check-out-error', { error: error.message });
     }
+
   });
 
   // Handle disconnection
@@ -110,8 +129,6 @@ io.on('connection', (socket) => {
 
 // Make io accessible to routes
 app.set('io', io);
-
-
 
 // =====================================================================================
 
@@ -128,7 +145,7 @@ app.use("*", (req, res) => {
 app.use(globalErrorHandler);
 
 // Start the server
-app.listen(4000, () => {
-  console.log("Server started on port 4000");
-  console.log("Link: http://localhost:4000");
+app.listen(5001, () => {
+  console.log("Server started on port 5001");
+  console.log("Link: http://localhost:5001");
 });

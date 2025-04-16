@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const attendanceSchema = new mongoose.Schema(
+const attendanceHistorySchema = new mongoose.Schema(
     {
         employeeId: { type: String, required: true },
         employeeName: { type: String, required: true },
@@ -13,18 +13,14 @@ const attendanceSchema = new mongoose.Schema(
             type: Date,
             default: null
         },
-        current_checkin_time: {
-            type: Date,
-            default: null
-        },
         checkout_time: {
             type: Date,
             default: null
         },
         status: {
             type: String,
-            enum: ["in", "out"],
-            default: "out",
+            enum: ["Present", "Absent", "Leave"],
+            default: "Absent",
         },
         working_hours: {
             type: Number,
@@ -32,11 +28,10 @@ const attendanceSchema = new mongoose.Schema(
             max: 24,
             default: 0
         },
-
     },
     { timestamps: true }
 );
 
-const AttendanceModel = mongoose.model("Attendance", attendanceSchema);
+const AttendenceHistoryModel = mongoose.model("AttendanceHistory", attendanceHistorySchema);
 
-export default AttendanceModel;
+export default AttendenceHistoryModel;

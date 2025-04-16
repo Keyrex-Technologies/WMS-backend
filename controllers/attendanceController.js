@@ -176,62 +176,6 @@ export const getPayroll = async (req, res) => {
     }
 };
 
-// Get today's attendance
-// export const getTodayAttendance = async (req, res) => {
-//     try {
-//         // Get today's date at midnight (start of day)
-//         const startOfDay = new Date();
-//         startOfDay.setHours(0, 0, 0, 0);
-
-//         // Get end of today (just before midnight)
-//         const endOfDay = new Date();
-//         endOfDay.setHours(23, 59, 59, 999);
-
-//         // Query attendance records for today
-//         const todayAttendance = await AttendanceModel.find({
-//             createdAt: {
-//                 $gte: startOfDay,
-//                 $lt: endOfDay
-//             }
-//         }).sort({ createdAt: -1 }); // Sort by most recent first
-
-//         res.json(todayAttendance);
-//     } catch (err) {
-//         console.log(err);
-//         res.status(500).json({ error: err.message });
-//     }
-// };
-
-// export const getEmployeeAttendance = async (req, res) => {
-//     try {
-//         const { employeeId } = req.params;
-
-//         // Get today's date range
-//         const startOfDay = new Date();
-//         startOfDay.setHours(0, 0, 0, 0);
-
-//         const endOfDay = new Date();
-//         endOfDay.setHours(23, 59, 59, 999);
-
-//         // Query attendance for specific employee today
-//         const employeeAttendance = await AttendanceModel.find({
-//             employeeId: employeeId,
-//             createdAt: {
-//                 $gte: startOfDay,
-//                 $lt: endOfDay
-//             }
-//         }).sort({ createdAt: -1 });
-
-//         if (!employeeAttendance.length) {
-//             return res.status(404).json({ message: 'No attendance records found for this employee today' });
-//         }
-
-//         res.json(employeeAttendance);
-//     } catch (err) {
-//         console.log(err);
-//         res.status(500).json({ error: err.message });
-//     }
-// };
 export const getTodayAttendance = async (req, res) => {
     try {
         console.log("first")
@@ -412,72 +356,137 @@ export const getEmployeeAttendance = async (req, res) => {
 
 
 // Socket-enabled controller methods
-export const socketCheckIn = async (req) => {
-    const { employeeId, employeeName, email, role } = req.body;
-    const today = new Date().toISOString().split('T')[0];
+export const socketCheckIn = async (data) => {
+    try {
+        const { employeeId, employeeName, email, date } =data;
+        const today = new Date(date || new Date());
+        today.setHours(0, 0, 0, 0);
 
-    // Check for existing check-in
-    const existing = await Attendance.findOne({
-        email,
-        date: today,
-        checkin_time: { $ne: null },
-        checkout_time: null
-    });
+        // Find if the employee already has an attendance record for today
+        let attendance = await AttendanceModel.findOne({
+            employeeId,
+            date: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
 
-    if (existing) {
-        throw new Error('You have already checked in today');
-    }
+        // Don't process duplicate check-ins
+        if (attendance && attendance.status === "in") {
+            return {
+                success: false,
+                message: "Already checked in"
+            };
+        }
 
-    const attendance = new Attendance({
-        employeeId,
-        employeeName,
-        email,
-        role,
-        status: 'present',
-        date: today,
-        checkin_time: new Date(),
-        working_hours: 0
-    });
+        const currentTime = new Date();
 
-    await attendance.save();
+        if (attendance) {
+            // Update existing record
+            attendance.current_checkin_time = currentTime;
+            attendance.status = "in";
+            await attendance.save();
+        } else {
+            // Create new record
+            attendance = await AttendanceModel.create({
+                employeeId,
+                employeeName,
+                email,
+                date: today,
+                checkin_time: currentTime,
+                current_checkin_time: currentTime,
+                status: "in",
+            });
+        }
 
-    return {
-        success: true,
-        message: 'Check-in recorded successfully',
-        attendance
+        return {
+            success: true,
+            data: attendance,
+            message: "Check-in successful"
+        };
+    } catch (error) {
+        console.error("Error during check-in:", error);
+        return {
+            success: false,
+            message: "Check-in failed",
+            error: error.message
+        };
     };
 };
 
-export const socketCheckOut = async (req) => {
-    const { email } = req.body;
-    const today = new Date().toISOString().split('T')[0];
+// Handle socket check-out
+export const socketCheckOut = async (data) => {
+    try {
+        const { employeeId, date } = data;
 
-    const attendance = await Attendance.findOne({
-        email,
-        date: today,
-        checkin_time: { $ne: null },
-        checkout_time: null
-    });
+        // Format date to remove time portion to find today's record
+        const today = new Date(date || new Date());
+        today.setHours(0, 0, 0, 0);
 
-    if (!attendance) {
-        throw new Error('No active check-in found for today');
+        // Find the employee's attendance record for today
+        const attendance = await AttendanceModel.findOne({
+            employeeId,
+            date: {
+                $gte: today,
+                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
+            }
+        });
+
+        if (!attendance) {
+            return {
+                success: false,
+                message: "No check-in record found for today"
+            };
+        }
+
+        // Don't process duplicate check-outs
+        if (attendance.status === "out") {
+            return {
+                success: false,
+                message: "Already checked out"
+            };
+        }
+
+        // Check if check-in exists
+        if (!attendance.current_checkin_time) {
+            return {
+                success: false,
+                message: "Must check in before checking out"
+            };
+        }
+
+        const currentTime = new Date();
+
+        // since it's the same day
+        // we can just subtract timestamps directly
+        const diffMs = currentTime - attendance.current_checkin_time;
+        
+        // Calculate minutes first
+        const minutesWorked = Math.floor(diffMs / (1000 * 60));
+        
+        // Convert to hours for storage (as per the schema)
+        const hoursWorked = minutesWorked / 60;
+
+        // Update the record
+        attendance.checkout_time = currentTime;
+        attendance.status = "out";
+        attendance.working_hours = parseFloat(hoursWorked.toFixed(2));
+
+        await attendance.save();
+
+        return {
+            success: true,
+            data: {
+                ...attendance._doc,
+                minutes_worked: minutesWorked
+            },
+            message: "Check-out successful"
+        };
+    } catch (error) {
+        console.error("Socket check-out error:", error);
+        return {
+            success: false,
+            message: error.message
+        };
     }
-
-    const checkoutTime = new Date();
-    const workingHours = (checkoutTime - attendance.checkin_time) / (1000 * 60 * 60);
-
-    attendance.checkout_time = checkoutTime;
-    attendance.working_hours = workingHours;
-
-    if (workingHours < 4) {
-        attendance.status = 'half-day';
-    }
-
-    await attendance.save();
-
-    return {
-        success: true,
-        message: 'Check-out recorded successfully',
-        attendance
-    };
 };
