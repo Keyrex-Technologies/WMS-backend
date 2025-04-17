@@ -6,6 +6,7 @@ import {
   getAllAttendance,
   getAllEmployeeAttendencePayroll,
   getAllEmployeesAttendencePayroll,
+  getLatestAttendance,
 } from "../controllers/attendanceController.js";
 
 const router = Router();
@@ -56,5 +57,7 @@ router.get("/get-all-attendance", getAllAttendance);
 router.get("/get-all-payrolls", getAllEmployeesAttendencePayroll);
 
 router.get("/get-payroll", getAllEmployeeAttendencePayroll);
+
+router.get("/get-current-attendance/:userId", getLatestAttendance);
 
 export default router;

@@ -168,6 +168,25 @@ export const getAllEmployeeAttendencePayroll = async (req, res) => {
   }
 };
 
+export const getLatestAttendance = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const attendanceHistory = await AttendenceHistory.findOne({ userId });
+
+    return res.json({
+      success: true,
+      attendance: attendanceHistory
+    });
+  } catch (err) {
+    console.error("Error in getAllAttendance:", err);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch attendance history",
+      message: err.message,
+    });
+  }
+};
+
 //get stats
 export const getAttendanceStats = async (req, res) => {
   try {
@@ -337,11 +356,9 @@ export const socketCheckOut = async (data) => {
   try {
     const { userId, date } = data;
 
-    // Format date to remove time portion to find today's record
     const today = new Date(date || new Date());
     today.setHours(0, 0, 0, 0);
 
-    // Find the employee's attendance record for today
     const attendance = await AttendanceModel.findOne({
       userId,
       date: {
@@ -357,15 +374,14 @@ export const socketCheckOut = async (data) => {
       };
     }
 
-    // Don't process duplicate check-outs
     if (attendance.status === "out") {
       return {
-        success: false,
+        success: true,
         message: "Already checked out",
+        attendance,
       };
     }
 
-    // Check if check-in exists
     if (!attendance.current_checkin_time) {
       return {
         success: false,
@@ -375,15 +391,18 @@ export const socketCheckOut = async (data) => {
 
     const currentTime = new Date();
 
+    // Get exact difference in milliseconds
     const diffMs = currentTime - attendance.current_checkin_time;
 
-    const secondsWorked = Math.floor(diffMs / 1000);
+    // Convert to seconds
+    const secondsWorked = diffMs / 1000;
 
-    const hoursWorked = parseFloat((secondsWorked / 3600).toFixed(2));
+    // Convert to hours with full decimal precision
+    const hoursWorked = secondsWorked / 3600;
 
     attendance.checkout_time = currentTime;
     attendance.status = "out";
-    attendance.working_hours += hoursWorked; // Stored in hours as decimal
+    attendance.working_hours += hoursWorked;
 
     await attendance.save();
 
@@ -391,6 +410,8 @@ export const socketCheckOut = async (data) => {
       success: true,
       data: {
         ...attendance._doc,
+        worked_seconds: Math.floor(secondsWorked),
+        worked_hours: parseFloat(hoursWorked.toFixed(6)), // full precision
       },
       message: "Check-out successful",
     };

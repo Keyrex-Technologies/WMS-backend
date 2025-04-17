@@ -219,6 +219,7 @@ export async function userSignInController(req, res) {
         _id: user._id,
         email: user.email,
         name: user.name,
+        isApproved: user.isApproved,
         isVerified: user.isVerified,
         role: user.role,
       };

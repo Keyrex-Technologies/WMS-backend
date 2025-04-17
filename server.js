@@ -8,6 +8,8 @@ import { Server } from "socket.io";
 import UserRoute from "./routes/users.routes.js";
 import AttendanceRoutes from "./routes/attendance.routes.js";
 import AdminRoutes from "./routes/admin.routes.js";
+import OriginsRoutes from "./routes/officeorigins.routes.js";
+import { ensureOfficeOriginExists } from "./models/officeorigins.model.js";
 import CustomError from "./Errors/customErrorHandler.js";
 import { authenticateToken } from "./middleware/auth.js";
 import connectDB from "./utils/db.js";
@@ -25,11 +27,11 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(cors());
 
-
 connectDB()
   .then(() => {
     console.log("Database connection established");
     initAttendanceArchiving();
+    ensureOfficeOriginExists()
   })
   .catch((err) => {
     console.error("Database connection failed", err);
@@ -116,6 +118,7 @@ app.set("io", io);
 app.use("/user", UserRoute);
 app.use("/attendance", authenticateToken, AttendanceRoutes);
 app.use("/admin", authenticateToken, AdminRoutes);
+app.use("/origins", authenticateToken, OriginsRoutes);
 
 app.use("*", (req, res) => {
   throw new CustomError(`${req.url} not found`, 404);
