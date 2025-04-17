@@ -152,7 +152,7 @@ app.use("*", (req, res) => {
 app.use(globalErrorHandler);
 
 // Start the server
-server.listen(5000, () => {
+server.listen(5000, '0.0.0.0',() => {
   console.log("Server started on port 5000");
   console.log("Link: http://localhost:5000");
 });
