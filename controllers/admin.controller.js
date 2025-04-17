@@ -281,7 +281,7 @@ export const getEmployeeById = async (req, res) => {
 // get all employees
 export const getAllEmployees = async (req, res) => {
   try {
-    const employees = await User.find()
+    const employees = await User.find({ role: "employee" || "manager" })
       .select("name email role status wagePerHour employeeId")
       .sort({ createdAt: -1 });
 
@@ -291,83 +291,3 @@ export const getAllEmployees = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch employees" });
   }
 };
-
-// Update user role
-// export const updateUserRole = async (req, res) => {
-//   try {
-//     const { userId } = req.params;
-//     const { role } = req.body;
-
-//     // Validate role
-//     if (!["employee", "manager", "admin"].includes(role)) {
-//       return res.status(400).json({ error: "Invalid role" });
-//     }
-
-//     const updatedUser = await User.findByIdAndUpdate(
-//       userId,
-//       { role },
-//       { new: true }
-//     );
-
-//     if (!updatedUser) {
-//       return res.status(404).json({ error: "User not found" });
-//     }
-
-//     res.json(updatedUser);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
-
-// Update hourly rate
-// export const updateHourlyRate = async (req, res) => {
-//   try {
-//     const { userId } = req.params;
-//     const { hourlyRate } = req.body;
-
-//     if (hourlyRate <= 0) {
-//       return res.status(400).json({ error: "Hourly rate must be positive" });
-//     }
-
-//     const updatedUser = await User.findByIdAndUpdate(
-//       userId,
-//       { hourlyRate },
-//       { new: true }
-//     );
-
-//     if (!updatedUser) {
-//       return res.status(404).json({ error: "User not found" });
-//     }
-
-//     res.json(updatedUser);
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
-
-// employee status
-// export const getEmployeeStatus = async (req, res) => {
-//   try {
-//     const { employeeId } = req.params;
-
-//     // Find employee and only return the status fields
-//     const employee = await User.findById(employeeId).select(
-//       "isApproved isActive employeeId name email"
-//     );
-
-//     if (!employee) {
-//       return res.status(404).json({ error: "Employee not found" });
-//     }
-
-//     res.json({
-//       employeeId: employee.employeeId,
-//       name: employee.name,
-//       email: employee.email,
-//       isApproved: employee.isApproved || false,
-//       isActive: employee.isActive !== false, // Default to true if undefined
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Failed to fetch employee status" });
-//   }
-// };

@@ -30,14 +30,4 @@ router.get("/get-employee/:employeeId", getEmployeeById);
 // get all employees
 router.get("/get-all-employees", getAllEmployees);
 
-
-
-
-
-// Update user role (admin/manager/employee)
-// router.patch("/users/:userId/role", updateUserRole);
-
-// Update user's hourly wage rate
-// router.patch("/users/:userId/rate", updateHourlyRate);
-
 export default router;

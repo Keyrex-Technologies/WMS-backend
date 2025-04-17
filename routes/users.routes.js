@@ -10,6 +10,7 @@ import {
   resendOtpController,
   getProfile,
   updateProfile,
+  LogoutController,
 } from "../controllers/users.controller.js";
 
 const router = Router();
@@ -41,5 +42,7 @@ router.get("/get-profile/:userId", getProfile);
 // Update user profile
 router.put("/update-profile/:userId", updateProfile);
 
+// logout
+router.get("/logout", LogoutController);
 
 export default router;
